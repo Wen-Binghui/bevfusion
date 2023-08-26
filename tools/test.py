@@ -113,7 +113,7 @@ def parse_args():
 def main():
     args = parse_args()
     dist.init()
-
+    print('init done')
     torch.backends.cudnn.benchmark = True
     torch.cuda.set_device(dist.local_rank())
 
