@@ -2,9 +2,9 @@
 #SBATCH --job-name="nuScenes_ext"
 #SBATCH --nodes=1
 #SBATCH --ntasks=1
-#SBATCH --gpus-per-task=4
+#SBATCH --gpus-per-task=2
 #SBATCH --cpus-per-task=16
-#SBATCH --gres=gpu:4,VRAM:20G
+#SBATCH --gres=gpu:2,VRAM:20G
 #SBATCH --mem=64G
 #SBATCH --time=48:00:00
 #SBATCH --mail-type=ALL
@@ -15,4 +15,4 @@
 #SBATCH --comment="andy"
 
 export GROUP_NAME_ANDY=bev_depth_lss_r50_256x704_128x128_24e_2key_testtest
-/usr/wiss/lhao/anaconda3/envs/bevfusion-torch190/bin/torchpack dist-run -np 4 tools/test.py configs/nuscenes/det/transfusion/secfpn/camera+lidar/swint_v0p075/convfuser.yaml pretrained/bevfusion-det.pth --eval bbox
+/usr/wiss/lhao/anaconda3/envs/bevfusion-torch190/bin/torchpack dist-run -np 2 tools/test.py configs/nuscenes/det/transfusion/secfpn/camera+lidar/swint_v0p075/convfuser.yaml pretrained/bevfusion-det.pth --eval bbox
