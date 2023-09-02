@@ -235,28 +235,29 @@ class BaseDepthTransform(BaseTransform):
         # print(img.shape, self.image_size, self.feature_size)
 
         batch_size = len(points)
+        #! one depth value for one pixel 
         depth = torch.zeros(batch_size, img.shape[1], 1, *self.image_size).to(
             points[0].device
         )
 
-        for b in range(batch_size):
+        for b in range(batch_size): # extract one instance from batch
             cur_coords = points[b][:, :3]
             cur_img_aug_matrix = img_aug_matrix[b]
             cur_lidar_aug_matrix = lidar_aug_matrix[b]
             cur_lidar2image = lidar2image[b]
 
-            # inverse aug
+            # inverse aug => real coord in physic lidar coord sys 
             cur_coords -= cur_lidar_aug_matrix[:3, 3]
             cur_coords = torch.inverse(cur_lidar_aug_matrix[:3, :3]).matmul(
                 cur_coords.transpose(1, 0)
-            )
-            # lidar2image
+            ) 
+            # lidar2image => camera coord sys 
             cur_coords = cur_lidar2image[:, :3, :3].matmul(cur_coords)
             cur_coords += cur_lidar2image[:, :3, 3].reshape(-1, 3, 1)
             # get 2d coords
-            dist = cur_coords[:, 2, :]
+            dist = cur_coords[:, 2, :] # get depth only
             cur_coords[:, 2, :] = torch.clamp(cur_coords[:, 2, :], 1e-5, 1e5)
-            cur_coords[:, :2, :] /= cur_coords[:, 2:3, :]
+            cur_coords[:, :2, :] /= cur_coords[:, 2:3, :] # x,y / z
 
             # imgaug
             cur_coords = cur_img_aug_matrix[:, :3, :3].matmul(cur_coords)

@@ -224,7 +224,7 @@ class BEVFusion(Base3DFusionModel):
     ):
         features = []
         for sensor in (
-            self.encoders if self.training else list(self.encoders.keys())[::-1]
+            self.encoders if self.training else list(self.encoders.keys())[::-1] # 不是训练反向读
         ):
             if sensor == "camera":
                 feature = self.extract_camera_features(

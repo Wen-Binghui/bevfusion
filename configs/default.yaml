@@ -10,8 +10,12 @@ log_config:
   hooks:
     -
       type: TextLoggerHook
+    # -
+    #   type: TensorboardLoggerHook
     -
-      type: TensorboardLoggerHook
+      type: WandbLoggerHook
+      init_kwargs: 
+        project: BEVFUSION_ORI
 
 load_from: null
 resume_from: null

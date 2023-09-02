@@ -1,0 +1,263 @@
+{
+    "os": "Linux-5.19.0-43-generic-x86_64-with-glibc2.17",
+    "python": "3.8.13",
+    "heartbeatAt": "2023-08-29T17:17:09.538927",
+    "startedAt": "2023-08-29T17:17:08.608660",
+    "docker": null,
+    "cuda": null,
+    "args": [
+        "configs/nuscenes/det/transfusion/secfpn/camera+lidar/swint_v0p075/convfuser.yaml",
+        "--model.encoders.camera.backbone.init_cfg.checkpoint",
+        "pretrained/swint-nuimages-pretrained.pth",
+        "--load_from",
+        "pretrained/lidar-only-det.pth"
+    ],
+    "state": "running",
+    "program": "tools/train.py",
+    "codePath": "tools/train.py",
+    "git": {
+        "remote": "git@github.com:Wen-Binghui/bevfusion.git",
+        "commit": "3946699bcf4f7975a2e53a4c322cc4a1a2fbeb0e"
+    },
+    "email": null,
+    "root": "/usr/stud/wenb/storage/codes/bevfusion",
+    "host": "node8",
+    "username": "wenb",
+    "executable": "/storage/user/wenb/software/anaconda3/envs/bevfusion-torch190/bin/python",
+    "cpu_count": 40,
+    "cpu_count_logical": 40,
+    "cpu_freq": {
+        "current": 3291.2614000000003,
+        "min": 1000.0,
+        "max": 3700.0
+    },
+    "cpu_freq_per_core": [
+        {
+            "current": 2851.072,
+            "min": 1000.0,
+            "max": 3700.0
+        },
+        {
+            "current": 3302.97,
+            "min": 1000.0,
+            "max": 3700.0
+        },
+        {
+            "current": 2829.053,
+            "min": 1000.0,
+            "max": 3700.0
+        },
+        {
+            "current": 3251.082,
+            "min": 1000.0,
+            "max": 3700.0
+        },
+        {
+            "current": 3399.388,
+            "min": 1000.0,
+            "max": 3700.0
+        },
+        {
+            "current": 3131.542,
+            "min": 1000.0,
+            "max": 3700.0
+        },
+        {
+            "current": 3284.392,
+            "min": 1000.0,
+            "max": 3700.0
+        },
+        {
+            "current": 3333.484,
+            "min": 1000.0,
+            "max": 3700.0
+        },
+        {
+            "current": 2871.899,
+            "min": 1000.0,
+            "max": 3700.0
+        },
+        {
+            "current": 3328.349,
+            "min": 1000.0,
+            "max": 3700.0
+        },
+        {
+            "current": 2533.555,
+            "min": 1000.0,
+            "max": 3700.0
+        },
+        {
+            "current": 3312.687,
+            "min": 1000.0,
+            "max": 3700.0
+        },
+        {
+            "current": 3333.483,
+            "min": 1000.0,
+            "max": 3700.0
+        },
+        {
+            "current": 3052.25,
+            "min": 1000.0,
+            "max": 3700.0
+        },
+        {
+            "current": 3700.0,
+            "min": 1000.0,
+            "max": 3700.0
+        },
+        {
+            "current": 2963.154,
+            "min": 1000.0,
+            "max": 3700.0
+        },
+        {
+            "current": 3700.0,
+            "min": 1000.0,
+            "max": 3700.0
+        },
+        {
+            "current": 3700.0,
+            "min": 1000.0,
+            "max": 3700.0
+        },
+        {
+            "current": 3149.383,
+            "min": 1000.0,
+            "max": 3700.0
+        },
+        {
+            "current": 3700.0,
+            "min": 1000.0,
+            "max": 3700.0
+        },
+        {
+            "current": 3249.765,
+            "min": 1000.0,
+            "max": 3700.0
+        },
+        {
+            "current": 3399.994,
+            "min": 1000.0,
+            "max": 3700.0
+        },
+        {
+            "current": 3700.0,
+            "min": 1000.0,
+            "max": 3700.0
+        },
+        {
+            "current": 3700.0,
+            "min": 1000.0,
+            "max": 3700.0
+        },
+        {
+            "current": 3700.0,
+            "min": 1000.0,
+            "max": 3700.0
+        },
+        {
+            "current": 3171.083,
+            "min": 1000.0,
+            "max": 3700.0
+        },
+        {
+            "current": 3700.0,
+            "min": 1000.0,
+            "max": 3700.0
+        },
+        {
+            "current": 3700.0,
+            "min": 1000.0,
+            "max": 3700.0
+        },
+        {
+            "current": 2524.456,
+            "min": 1000.0,
+            "max": 3700.0
+        },
+        {
+            "current": 2729.997,
+            "min": 1000.0,
+            "max": 3700.0
+        },
+        {
+            "current": 3400.0,
+            "min": 1000.0,
+            "max": 3700.0
+        },
+        {
+            "current": 3700.0,
+            "min": 1000.0,
+            "max": 3700.0
+        },
+        {
+            "current": 2846.065,
+            "min": 1000.0,
+            "max": 3700.0
+        },
+        {
+            "current": 3400.004,
+            "min": 1000.0,
+            "max": 3700.0
+        },
+        {
+            "current": 3400.003,
+            "min": 1000.0,
+            "max": 3700.0
+        },
+        {
+            "current": 3400.003,
+            "min": 1000.0,
+            "max": 3700.0
+        },
+        {
+            "current": 3400.002,
+            "min": 1000.0,
+            "max": 3700.0
+        },
+        {
+            "current": 2460.51,
+            "min": 1000.0,
+            "max": 3700.0
+        },
+        {
+            "current": 3700.0,
+            "min": 1000.0,
+            "max": 3700.0
+        },
+        {
+            "current": 3214.109,
+            "min": 1000.0,
+            "max": 3700.0
+        }
+    ],
+    "disk": {
+        "total": 188.27789306640625,
+        "used": 4.3466339111328125
+    },
+    "gpu": "Quadro RTX 5000",
+    "gpu_count": 4,
+    "gpu_devices": [
+        {
+            "name": "Quadro RTX 5000",
+            "memory_total": 17179869184
+        },
+        {
+            "name": "Quadro RTX 5000",
+            "memory_total": 17179869184
+        },
+        {
+            "name": "Quadro RTX 5000",
+            "memory_total": 17179869184
+        },
+        {
+            "name": "Quadro RTX 5000",
+            "memory_total": 17179869184
+        }
+    ],
+    "memory": {
+        "total": 376.55578994750977
+    }
+}

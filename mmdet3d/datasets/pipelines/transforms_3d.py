@@ -96,6 +96,7 @@ class ImageAug3D:
         new_imgs = []
         transforms = []
         for img in imgs:
+            # get random parameters for aug
             resize, resize_dims, crop, flip, rotate = self.sample_augmentation(data)
             post_rot = torch.eye(2)
             post_tran = torch.zeros(2)
