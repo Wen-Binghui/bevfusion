@@ -902,15 +902,22 @@ class ImagePad:
 
 @PIPELINES.register_module()
 class ImageNormalize:
-    def __init__(self, mean, std):
+    def __init__(self, mean, std, ignore = False):
         self.mean = mean
         self.std = std
-        self.compose = torchvision.transforms.Compose(
-            [
-                torchvision.transforms.ToTensor(),
-                torchvision.transforms.Normalize(mean=mean, std=std),
-            ]
-        )
+        if ignore:
+           self.compose = torchvision.transforms.Compose(
+                [
+                    torchvision.transforms.ToTensor(),
+                ]
+            )
+        else: 
+            self.compose = torchvision.transforms.Compose(
+                [
+                    torchvision.transforms.ToTensor(),
+                    torchvision.transforms.Normalize(mean=mean, std=std),
+                ]
+            )
 
     def __call__(self, data: Dict[str, Any]) -> Dict[str, Any]:
         data["img"] = [self.compose(img) for img in data["img"]]

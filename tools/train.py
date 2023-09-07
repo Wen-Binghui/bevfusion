@@ -64,7 +64,7 @@ def main():
             torch.backends.cudnn.benchmark = False
 
     datasets = [build_dataset(cfg.data.train)]
-
+    
     model = build_model(cfg.model)
     model.init_weights()
     if cfg.get("sync_bn", None):
