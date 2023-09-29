@@ -8,7 +8,8 @@ import pdb
 import torch
 import copy
 import numpy as np
-from projection_tool import projection_tool
+import projection_tool.projection_tool as proj_tool
+import projection_tool.visualize_tool as vis_tool
 
 
 def getdata_from_DC(data, name):
@@ -23,6 +24,11 @@ cfg = Config(recursive_eval(configs), filename=config_path)
 # data = mmcv.load(ann_file)
 # mmcv.dump(data["infos"][35], 'data/sample_train_infos.json', indent = 4)
 datasets = build_dataset(cfg.data.train)
+
+# dbound = cfg.model.encoders.camera.vtransform.dbound
+dbound = [1.0, 60.0, 0.5]
+cmap = plt.get_cmap("jet")
+
 for idx in range(3):
     data_ = datasets[idx]
     img = data_["img"].data.permute(0, 2, 3, 1)
@@ -32,7 +38,7 @@ for idx in range(3):
     lidar_aug_matrix = getdata_from_DC(data_, 'lidar_aug_matrix')
     lidar2image = getdata_from_DC(data_, 'lidar2image')
     N = img.shape[0]
-    image_size = (img.shape[1], img.shape[2])
+    image_size = (img.shape[1], img.shape[2]) # (256, 704)
     for i in range(N):
         cur_coords = copy.deepcopy(points) # N * 3
         cur_img_aug_matrix = img_aug_matrix[i, ...] # (4, 4)
@@ -77,11 +83,34 @@ for idx in range(3):
         # np.savetxt(f"vis/fig_{idx}_{i}.txt", cam_coors.transpose(0, 1))
         # o3d.io.write_point_cloud(f"vis/fig_{idx}_{i}.pcd", pcd)
         img_coord = torch.hstack((cur_coords[on_img, :2], dist[on_img].unsqueeze(1)))  # (n, 3)
-        projection_tool.create_depth_scatter_matrix(image_size[0], image_size[1], img_coord)
+        img_coord = img_coord[img_coord[:,2]<=60, :]# TODO > 1?, NOT HARD CODING
+        print('img_coord', img_coord.shape)
+        width, height = image_size[1], image_size[0]
+        print(width, height)
+        
+        depth_collection_mat = proj_tool.create_depth_scatter_matrix(width, 
+                                                                     height, 
+                                                                     img_coord)
+        depth_prob_map = proj_tool.generate_depth_prob_map(height, 
+                                                           width,
+                                                           dbound, 
+                                                           depth_collection_mat)
+        print('calcu done')        
+        fig = plt.figure()
+        ax = fig.add_subplot(111, projection='3d')
+        # 画图比较费时，计算还好
+        vis_tool.bar3d_for_depthmap(height, 
+                       width, 
+                       depth_prob_map, 
+                       dbound, 
+                       ax, 
+                       cmap, 
+                       destimg_path = f"vis/fig_{idx}_{i}_3d.png")
+        print('img gene done')   
+        fig = plt.figure()
+        plt.imshow(img[i, ...].numpy())
+        plt.scatter(cur_coords[on_img, 1], cur_coords[on_img, 0], c = dist[on_img], s = 0.6, cmap='viridis',alpha = 0.7)
+        plt.savefig(f"vis/fig_{idx}_{i}.png", dpi=400)
+        plt.close('all')
 
-        # plt.imshow(img[i, ...].numpy())
-        # plt.scatter(cur_coords[on_img, 1], cur_coords[on_img, 0], c = dist[on_img], s = 0.6, cmap='viridis',alpha = 0.7)
-        # plt.savefig(f"vis/fig_{idx}_{i}.png", dpi=400)
-        # plt.close('all')
-
-pdb.set_trace()
+# pdb.set_trace()
