@@ -15,7 +15,7 @@ log_config:
     # -
     #   type: WandbLoggerHook
     #   init_kwargs: 
-    #     project: BEVFUSION_ORI
+    #     project: BEVFUSION_TEST
 
 load_from: null
 resume_from: null
@@ -25,7 +25,7 @@ fp16:
   loss_scale: 
     growth_interval: 2000
 
-max_epochs: 20
+max_epochs: 1
 runner:
   type: CustomEpochBasedRunner
   max_epochs: ${max_epochs}

@@ -98,7 +98,7 @@ for idx in range(3):
         print('calcu done')        
         fig = plt.figure()
         ax = fig.add_subplot(111, projection='3d')
-        # 画图比较费时，计算还好
+        # 画图比较费时，计算耗时还好
         vis_tool.bar3d_for_depthmap(height, 
                        width, 
                        depth_prob_map, 

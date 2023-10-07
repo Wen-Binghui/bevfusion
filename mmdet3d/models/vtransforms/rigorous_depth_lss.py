@@ -3,9 +3,9 @@ from typing import Tuple
 import torch
 from mmcv.runner import force_fp32
 from torch import nn
-
+import time
 from mmdet3d.models.builder import VTRANSFORMS
-
+import projection_tool.projection_tool as proj_tool
 from .base import BaseTransform
 
 __all__ = ["RigorousDepthLSSTransform"]
@@ -78,19 +78,25 @@ class RigorousDepthLSSTransform(BaseTransform):
         else:
             self.downsample = nn.Identity()
 
+        self.depth_downsample_ratio = 8.0
+
     @force_fp32()
-    def get_cam_feats(self, x, d):
+    def get_cam_feats(self, x, d, depth_dist):
+        '''
+        
+        '''
         B, N, C, fH, fW = x.shape
-
-        d = d.view(B * N, *d.shape[2:])
+        d = d.view(B * N, *d.shape[2:]) # ori d torch.Size([1, 6, 1, 256, 704])
         x = x.view(B * N, C, fH, fW)
-
-        d = self.dtransform(d)
+        depth_dist = depth_dist.view(B * N, *depth_dist.shape[2:]).permute(0, 3, 1, 2) # torch.Size([6, 32, 88, 118])
+        d = self.dtransform(d) # d dtransformed torch.Size([6, 64, 32, 88]) # 八倍下采样
         x = torch.cat([d, x], dim=1)
-        x = self.depthnet(x)
-
-        depth = x[:, : self.D].softmax(dim=1)
-        x = depth.unsqueeze(1) * x[:, self.D : (self.D + self.C)].unsqueeze(2)
+        x = self.depthnet(x) # x torch.Size([6, 198, 32, 88])
+        depth = x[:, : self.D].softmax(dim=1) # depth torch.Size([6, 118, 32, 88])
+        #! add with known distribution
+        depth_mix =  depth + depth_dist
+        depth_mix /= torch.sum(depth_mix, dim = -1).unsqueeze(-1)
+        x = depth_mix.unsqueeze(1) * x[:, self.D : (self.D + self.C)].unsqueeze(2)
 
         x = x.view(B, N, self.C, self.D, fH, fW)
         x = x.permute(0, 1, 3, 4, 5, 2)
@@ -130,7 +136,16 @@ class RigorousDepthLSSTransform(BaseTransform):
         depth = torch.zeros(batch_size, img.shape[1], 1, *self.image_size).to(
             points[0].device
         )
+        width, height = self.image_size[1], self.image_size[0]
+        # print('width, height: ', width, height) # 704， 256
 
+        n_depth = int((self.dbound[1] - self.dbound[0])/self.dbound[2])
+        depth_prob_map = torch.zeros((batch_size,
+                                      img.shape[1], 
+                                      height//int(self.depth_downsample_ratio),
+                                      width//int(self.depth_downsample_ratio),
+                                      n_depth
+                                      )).to(points[0].device)
         for b in range(batch_size): # extract one instance from batch
             cur_coords = points[b][:, :3]
             cur_img_aug_matrix = img_aug_matrix[b]
@@ -160,16 +175,25 @@ class RigorousDepthLSSTransform(BaseTransform):
 
             on_img = (
                 (cur_coords[..., 0] < self.image_size[0])
-                & (cur_coords[..., 0] >= 0)
+                & (cur_coords[..., 0] > 0)
                 & (cur_coords[..., 1] < self.image_size[1])
-                & (cur_coords[..., 1] >= 0)
+                & (cur_coords[..., 1] > 0)
             )
             # TODO 将深度每个pixel一个值改为 多个 
-            for c in range(on_img.shape[0]):
+            for c in range(on_img.shape[0]): # each camera
                 masked_coords = cur_coords[c, on_img[c]].long()
                 masked_dist = dist[c, on_img[c]]
+
+                img_coord = torch.hstack((cur_coords[c, on_img[c], :2].squeeze(0), dist[c, on_img[c]].unsqueeze(1)))  # (n, 3)
+                img_coord = img_coord[(img_coord[:,2]<=self.dbound[1]) & (img_coord[:,2]>=self.dbound[0]), :]
                 depth[b, c, 0, masked_coords[:, 0], masked_coords[:, 1]] = masked_dist
 
+                depth_prob_map[b, c, :, :, :] = proj_tool.create_depth_scatter_matrix_v2(width, 
+                                                                        height, 
+                                                                        img_coord, 
+                                                                        self.dbound, 
+                                                                        depth.device,
+                                                                        downsample_ratio=self.depth_downsample_ratio) # size: (height, width, depth_num) #* torch.Size([32, 88, 118])
         extra_rots = lidar_aug_matrix[..., :3, :3]
         extra_trans = lidar_aug_matrix[..., :3, 3]
         geom = self.get_geometry(
@@ -181,8 +205,8 @@ class RigorousDepthLSSTransform(BaseTransform):
             extra_rots=extra_rots,
             extra_trans=extra_trans,
         )
-
-        x = self.get_cam_feats(img, depth)
+        # depth of shape (b, picture_num, 1, height, width)
+        x = self.get_cam_feats(img, depth, depth_prob_map)
         x = self.bev_pool(geom, x)
 
         # inhri

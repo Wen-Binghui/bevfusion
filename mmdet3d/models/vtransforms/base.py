@@ -58,7 +58,7 @@ class BaseTransform(nn.Module):
             torch.arange(*self.dbound, dtype=torch.float)
             .view(-1, 1, 1)
             .expand(-1, fH, fW)
-        )
+        ) # (D, fH, fW)
         D, _, _ = ds.shape
 
         xs = (

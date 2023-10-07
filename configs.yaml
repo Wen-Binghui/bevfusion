@@ -23,7 +23,7 @@ checkpoint_config:
   max_keep_ckpts: 1
 cudnn_benchmark: false
 data:
-  samples_per_gpu: 2
+  samples_per_gpu: 1
   test:
     ann_file: data/nuscenes/nuscenes_infos_val.pkl
     box_type_3d: LiDAR
