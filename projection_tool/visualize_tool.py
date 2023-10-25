@@ -59,7 +59,7 @@ def bar3d_for_depthmap(height,
                 z = dbound[0] + depth_dist_ij[0, k] * dbound[2]
                 color = cmap(depth_dist_ij[1, k])
                 # 添加 alpha 值使颜色半透明
-                ax.bar3d(ih, jw, z, 1, 1, dbound[2],
+                ax.bar3d(ih, jw, -z, 1, 1, dbound[2],
                         color=color, shade=False, alpha=0.3)
     ax.set_title('3D Bar Plot with transparency')
     ax.set_box_aspect([1, 1, 1])

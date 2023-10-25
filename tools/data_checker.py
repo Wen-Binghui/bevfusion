@@ -88,13 +88,13 @@ for idx in range(3):
         width, height = image_size[1], image_size[0]
         print(width, height)
         
-        depth_collection_mat = proj_tool.create_depth_scatter_matrix(width, 
+        depth_prob_map = proj_tool.create_depth_scatter_matrix_v2(width, 
                                                                      height, 
-                                                                     img_coord)
-        depth_prob_map = proj_tool.generate_depth_prob_map(height, 
-                                                           width,
-                                                           dbound, 
-                                                           depth_collection_mat)
+                                                                     img_coord,
+                                                                     dbound,
+                                                                     cur_coords.device
+                                                                     ).numpy()
+        print(depth_prob_map.shape)
         print('calcu done')        
         fig = plt.figure()
         ax = fig.add_subplot(111, projection='3d')

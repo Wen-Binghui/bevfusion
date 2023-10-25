@@ -174,6 +174,7 @@ def create_depth_scatter_matrix_v2(width, height, img_coord_float: torch.Tensor,
         cumsum_depth_dist[:, i] = torch.bincount(inverse, weights=img_coord_depth_dist[:,i])
     new_height = int(height/downsample_ratio)
     new_width = int(width/downsample_ratio)
+    # print(new_height, new_width, max(uniques[:,0]), max(uniques[:,1]))
     depth_prob_map = torch.zeros((new_height, new_width, n_depth)).to(device)
     depth_prob_map[uniques[:,0], uniques[:,1]] = cumsum_depth_dist
     

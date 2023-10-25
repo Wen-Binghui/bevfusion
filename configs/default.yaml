@@ -6,16 +6,16 @@ checkpoint_config:
   max_keep_ckpts: 1
 
 log_config:
-  interval: 50
+  interval: 10
   hooks:
     -
       type: TextLoggerHook
     # -
     #   type: TensorboardLoggerHook
-    # -
-    #   type: WandbLoggerHook
-    #   init_kwargs: 
-    #     project: BEVFUSION_ORI
+    -
+      type: WandbLoggerHook
+      init_kwargs: 
+        project: BEVFUSION_ORI_bs3
 
 load_from: null
 resume_from: null

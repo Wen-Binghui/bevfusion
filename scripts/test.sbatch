@@ -17,7 +17,9 @@
 # export GROUP_NAME_ANDY=bev_depth_lss_r50_256x704_128x128_24e_2key_testtest
 conda activate bevfusion-torch190
 ml load cuda/11.1
+export RDMAV_FORK_SAFE=True
 cd /usr/stud/wenb/storage/codes/bevfusion
+
 python setup.py develop
 
 

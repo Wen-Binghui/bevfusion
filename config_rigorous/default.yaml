@@ -6,16 +6,17 @@ checkpoint_config:
   max_keep_ckpts: 1
 
 log_config:
-  interval: 50
+  interval: 10
   hooks:
     -
       type: TextLoggerHook
     # -
     #   type: TensorboardLoggerHook
-    # -
-    #   type: WandbLoggerHook
-    #   init_kwargs: 
-    #     project: BEVFUSION_TEST
+    -
+      type: WandbLoggerHook
+      init_kwargs: 
+        project: BEVFUSION_v01
+        name: 'user_name'
 
 load_from: null
 resume_from: null
@@ -25,7 +26,7 @@ fp16:
   loss_scale: 
     growth_interval: 2000
 
-max_epochs: 1
+max_epochs: 20
 runner:
   type: CustomEpochBasedRunner
   max_epochs: ${max_epochs}
