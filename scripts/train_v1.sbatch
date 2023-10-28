@@ -21,6 +21,6 @@ export RDMAV_FORK_SAFE=True
 cd /usr/stud/wenb/storage/codes/bevfusion
 
 /usr/wiss/lhao/anaconda3/envs/bevfusion-torch190/bin/torchpack dist-run -np 4 python tools/train.py \
-/usr/stud/wenb/storage/codes/bevfusion/config_rigorous/configs_rig_v1.yaml \
+/usr/stu【d/wenb/storage/codes/bevfusion/config_rigorous/configs_rig_v1.yaml \
  --model.encoders.camera.backbone.init_cfg.checkpoint pretrained/swint-nuimages-pretrained.pth 
 

@@ -463,7 +463,7 @@ class TransFusionHead(nn.Module):
                     score_layer,
                     self.train_cfg,
                 )
-            elif self.train_cfg.assigner.type == "HeuristicAssigner":
+            elif self.train_cfg.assigner.type == "HeuristicAssigner": # 出问题
                 assign_result = self.bbox_assigner.assign(
                     bboxes_tensor_layer,
                     gt_bboxes_tensor,

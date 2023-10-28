@@ -146,6 +146,7 @@ class RigorousDepthLSSTransform(BaseTransform):
                                       width//int(self.depth_downsample_ratio),
                                       n_depth
                                       )).to(points[0].device)
+        
         for b in range(batch_size): # extract one instance from batch
             cur_coords = points[b][:, :3]
             cur_img_aug_matrix = img_aug_matrix[b]
@@ -246,13 +247,15 @@ class RigorousDepthLSSTransform_v1(RigorousDepthLSSTransform):
         )
         # n_depth = int((dbound[1] - dbound[0])/dbound[2])
         mid_depthmap_channel = 8
+        conv3d_kernel_size = 3
         self.depthmap_fuser = nn.Sequential(
-            nn.Conv3d(1, mid_depthmap_channel, kernel_size=3, padding=1),
+            nn.Conv3d(1, mid_depthmap_channel, kernel_size=conv3d_kernel_size, padding=1, bias=False),
             nn.ReLU(True),
-            nn.Conv3d(mid_depthmap_channel, 1, kernel_size=3, padding=1),
+            nn.Conv3d(mid_depthmap_channel, 1, kernel_size=conv3d_kernel_size, padding=1, bias=False),
         )
-
-        pass
+        for name, param in self.depthmap_fuser.named_parameters():
+            if 'weight' in name:
+                nn.init.normal_(param, mean=1, std=0.01) # 正态初始化
 
     @force_fp32()
     def forward(
@@ -290,75 +293,76 @@ class RigorousDepthLSSTransform_v1(RigorousDepthLSSTransform):
                                       width//int(self.depth_downsample_ratio),
                                       n_depth
                                       )).to(points[0].device)
-        for b in range(batch_size): # extract one instance from batch
-            cur_coords = points[b][:, :3]
-            cur_img_aug_matrix = img_aug_matrix[b]
-            cur_lidar_aug_matrix = lidar_aug_matrix[b]
-            cur_lidar2image = lidar2image[b]
+        with torch.autograd.set_detect_anomaly(True):
+            for b in range(batch_size): # extract one instance from batch
+                cur_coords = points[b][:, :3]
+                cur_img_aug_matrix = img_aug_matrix[b]
+                cur_lidar_aug_matrix = lidar_aug_matrix[b]
+                cur_lidar2image = lidar2image[b]
 
-            # inverse aug => real coord in physic lidar coord sys 
-            cur_coords -= cur_lidar_aug_matrix[:3, 3]
-            cur_coords = torch.inverse(cur_lidar_aug_matrix[:3, :3]).matmul(
-                cur_coords.transpose(1, 0)
-            ) 
-            # lidar2image => camera coord sys 
-            cur_coords = cur_lidar2image[:, :3, :3].matmul(cur_coords)
-            cur_coords += cur_lidar2image[:, :3, 3].reshape(-1, 3, 1)
-            # get 2d coords
-            dist = cur_coords[:, 2, :] # get depth only
-            cur_coords[:, 2, :] = torch.clamp(cur_coords[:, 2, :], 1e-5, 1e5)
-            cur_coords[:, :2, :] /= cur_coords[:, 2:3, :] # x,y / z
+                # inverse aug => real coord in physic lidar coord sys 
+                cur_coords -= cur_lidar_aug_matrix[:3, 3]
+                cur_coords = torch.inverse(cur_lidar_aug_matrix[:3, :3]).matmul(
+                    cur_coords.transpose(1, 0)
+                ) 
+                # lidar2image => camera coord sys 
+                cur_coords = cur_lidar2image[:, :3, :3].matmul(cur_coords)
+                cur_coords += cur_lidar2image[:, :3, 3].reshape(-1, 3, 1)
+                # get 2d coords
+                dist = cur_coords[:, 2, :] # get depth only
+                cur_coords[:, 2, :] = torch.clamp(cur_coords[:, 2, :], 1e-5, 1e5)
+                cur_coords[:, :2, :] /= cur_coords[:, 2:3, :] # x,y / z
 
-            # imgaug
-            cur_coords = cur_img_aug_matrix[:, :3, :3].matmul(cur_coords)
-            cur_coords += cur_img_aug_matrix[:, :3, 3].reshape(-1, 3, 1)
-            cur_coords = cur_coords[:, :2, :].transpose(1, 2)
+                # imgaug
+                cur_coords = cur_img_aug_matrix[:, :3, :3].matmul(cur_coords)
+                cur_coords += cur_img_aug_matrix[:, :3, 3].reshape(-1, 3, 1)
+                cur_coords = cur_coords[:, :2, :].transpose(1, 2)
 
-            # normalize coords for grid sample
-            cur_coords = cur_coords[..., [1, 0]]
+                # normalize coords for grid sample
+                cur_coords = cur_coords[..., [1, 0]]
 
-            on_img = (
-                (cur_coords[..., 0] < self.image_size[0])
-                & (cur_coords[..., 0] > 0)
-                & (cur_coords[..., 1] < self.image_size[1])
-                & (cur_coords[..., 1] > 0)
+                on_img = (
+                    (cur_coords[..., 0] < self.image_size[0])
+                    & (cur_coords[..., 0] > 0)
+                    & (cur_coords[..., 1] < self.image_size[1])
+                    & (cur_coords[..., 1] > 0)
+                )
+                # TODO 将深度每个pixel一个值改为 多个 
+                for c in range(on_img.shape[0]): # each camera
+                    masked_coords = cur_coords[c, on_img[c]].long()
+                    masked_dist = dist[c, on_img[c]]
+
+                    img_coord = torch.hstack((cur_coords[c, on_img[c], :2].squeeze(0), dist[c, on_img[c]].unsqueeze(1)))  # (n, 3)
+                    img_coord = img_coord[(img_coord[:,2]<=self.dbound[1]) & (img_coord[:,2]>=self.dbound[0]), :]
+                    depth[b, c, 0, masked_coords[:, 0], masked_coords[:, 1]] = masked_dist
+
+                    depth_prob_map[b, c, :, :, :] = proj_tool.create_depth_scatter_matrix_v2(width, 
+                                                                            height, 
+                                                                            img_coord, 
+                                                                            self.dbound, 
+                                                                            depth.device,
+                                                                            downsample_ratio=self.depth_downsample_ratio) # size: (height, width, depth_num) #* torch.Size([32, 88, 118])
+            
+            B, C, height_depth_map, width_depth_map, num_depth_partition = depth_prob_map.shape
+            depth_prob_map = depth_prob_map.view(B*C, 1, height_depth_map, width_depth_map, num_depth_partition)
+            depth_prob_map: torch.Tensor = self.depthmap_fuser(depth_prob_map)
+            depth_prob_map = depth_prob_map.view(B, C, height_depth_map, width_depth_map, num_depth_partition)
+            depth_prob_map = torch.maximum(torch.tensor(0.0).to(depth_prob_map.device), depth_prob_map)
+            extra_rots = lidar_aug_matrix[..., :3, :3]
+            extra_trans = lidar_aug_matrix[..., :3, 3]
+            geom = self.get_geometry(
+                camera2lidar_rots,
+                camera2lidar_trans,
+                intrins,
+                post_rots,
+                post_trans,
+                extra_rots=extra_rots,
+                extra_trans=extra_trans,
             )
-            # TODO 将深度每个pixel一个值改为 多个 
-            for c in range(on_img.shape[0]): # each camera
-                masked_coords = cur_coords[c, on_img[c]].long()
-                masked_dist = dist[c, on_img[c]]
+            # depth of shape (b, picture_num, 1, height, width)
+            x = self.get_cam_feats(img, depth, depth_prob_map)
+            x = self.bev_pool(geom, x)
 
-                img_coord = torch.hstack((cur_coords[c, on_img[c], :2].squeeze(0), dist[c, on_img[c]].unsqueeze(1)))  # (n, 3)
-                img_coord = img_coord[(img_coord[:,2]<=self.dbound[1]) & (img_coord[:,2]>=self.dbound[0]), :]
-                depth[b, c, 0, masked_coords[:, 0], masked_coords[:, 1]] = masked_dist
-
-                depth_prob_map[b, c, :, :, :] = proj_tool.create_depth_scatter_matrix_v2(width, 
-                                                                        height, 
-                                                                        img_coord, 
-                                                                        self.dbound, 
-                                                                        depth.device,
-                                                                        downsample_ratio=self.depth_downsample_ratio) # size: (height, width, depth_num) #* torch.Size([32, 88, 118])
-        
-        B, C, height_depth_map, width_depth_map, num_depth_partition = depth_prob_map.shape
-        depth_prob_map = depth_prob_map.view(B*C, 1, height_depth_map, width_depth_map, num_depth_partition)
-        depth_prob_map: torch.Tensor = self.depthmap_fuser(depth_prob_map)
-        depth_prob_map = depth_prob_map.view(B, C, height_depth_map, width_depth_map, num_depth_partition)
-
-        extra_rots = lidar_aug_matrix[..., :3, :3]
-        extra_trans = lidar_aug_matrix[..., :3, 3]
-        geom = self.get_geometry(
-            camera2lidar_rots,
-            camera2lidar_trans,
-            intrins,
-            post_rots,
-            post_trans,
-            extra_rots=extra_rots,
-            extra_trans=extra_trans,
-        )
-        # depth of shape (b, picture_num, 1, height, width)
-        x = self.get_cam_feats(img, depth, depth_prob_map)
-        x = self.bev_pool(geom, x)
-
-        # inhri
-        x = self.downsample(x)
+            # inhri
+            x = self.downsample(x)
         return x

@@ -1,5 +1,4 @@
 import argparse
-
 from data_converter import nuscenes_converter as nuscenes_converter
 from data_converter.create_gt_database import create_groundtruth_database
 
@@ -97,16 +96,16 @@ if __name__ == "__main__":
             load_augmented = "pointpainting"
 
     if args.dataset == "nuscenes" and args.version != "v1.0-mini":
-        # train_version = f"{args.version}-trainval"
-        # nuscenes_data_prep(
-        #     root_path=args.root_path,
-        #     info_prefix=args.extra_tag,
-        #     version=train_version,
-        #     dataset_name="NuScenesDataset",
-        #     out_dir=args.out_dir,
-        #     max_sweeps=args.max_sweeps,
-        #     load_augmented=load_augmented,
-        # )
+        train_version = f"{args.version}-trainval"
+        nuscenes_data_prep(
+            root_path=args.root_path,
+            info_prefix=args.extra_tag,
+            version=train_version,
+            dataset_name="NuScenesDataset",
+            out_dir=args.out_dir,
+            max_sweeps=args.max_sweeps,
+            load_augmented=load_augmented,
+        )
         test_version = f"{args.version}-test"
         nuscenes_data_prep(
             root_path=args.root_path,
