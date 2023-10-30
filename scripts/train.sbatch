@@ -16,21 +16,18 @@
 echo start
 pwd
 nvidia-smi
-
-# conda activate bevfusion-torch190
 ml load cuda/11.1
 export RDMAV_FORK_SAFE=True
 cd /usr/stud/wenb/storage/codes/bevfusion
-
-
-/usr/wiss/lhao/anaconda3/envs/bevfusion-torch190/bin/torchpack dist-run -np 4 python tools/train.py \
+/usr/stud/wenb/storage/software/anaconda3/envs/bevfusion-torch190/bin/torchpack dist-run -np 4 python tools/train.py \
 /usr/stud/wenb/storage/codes/bevfusion/config_rigorous/nuscenes/det/transfusion/secfpn/camera+lidar/swint_v0p075/convfuser.yaml \
  --model.encoders.camera.backbone.init_cfg.checkpoint pretrained/swint-nuimages-pretrained.pth 
 
 # --resume_from /usr/stud/wenb/storage/codes/bevfusion/runs/run-3e6a424f-e9be4fd8/latest.pth
 
+# conda activate bevfusion-torch190
 
-# /usr/wiss/lhao/anaconda3/envs/bevfusion-torch190/bin/torchpack dist-run -np 4 python tools/test.py \
+# /usr/stud/wenb/storage/software/anaconda3/envs/bevfusion-torch190/bin/torchpack dist-run -np 4 python tools/test.py \
 # /usr/stud/wenb/storage/codes/bevfusion/config_rigorous/nuscenes/det/transfusion/secfpn/camera+lidar/swint_v0p075/convfuser.yaml \
 # /usr/stud/wenb/storage/codes/bevfusion/runs/run-3e6a424f-e9be4fd8/latest.pth \
 #  --eval bbox \

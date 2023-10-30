@@ -1,5 +1,5 @@
 #!/bin/bash
-#SBATCH --job-name="bevtfuseL"
+#SBATCH --job-name="btL"
 #SBATCH --nodes=1
 #SBATCH --ntasks=2
 #SBATCH --cpus-per-task=8
@@ -16,14 +16,11 @@
 echo start
 pwd
 nvidia-smi
-
-# conda activate bevfusion-torch190
 ml load cuda/11.1
 export RDMAV_FORK_SAFE=True
 cd /usr/stud/wenb/storage/codes/bevfusion
-
-
-/usr/wiss/lhao/anaconda3/envs/bevfusion-torch190/bin/torchpack dist-run -np 2 python tools/train.py \
+/usr/stud/wenb/storage/software/anaconda3/envs/bevfusion-torch190/bin/torchpack dist-run -np 2 /usr/stud/wenb/storage/software/anaconda3/envs/bevfusion-torch190/bin/python3 tools/train.py \
 /usr/stud/wenb/storage/codes/bevfusion/config_rigorous/configs_rig_v1_bs1.yaml \
  --model.encoders.camera.backbone.init_cfg.checkpoint pretrained/swint-nuimages-pretrained.pth 
 
+# conda activate bevfusion-torch190
