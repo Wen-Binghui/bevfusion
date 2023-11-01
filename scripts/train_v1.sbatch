@@ -15,12 +15,12 @@
 
 echo start
 pwd
-conda activate bevfusion-torch190
+nvidia-smi
 ml load cuda/11.1
 export RDMAV_FORK_SAFE=True
 cd /usr/stud/wenb/storage/codes/bevfusion
-
-/usr/wiss/lhao/anaconda3/envs/bevfusion-torch190/bin/torchpack dist-run -np 4 python tools/train.py \
-/usr/stu【d/wenb/storage/codes/bevfusion/config_rigorous/configs_rig_v1.yaml \
+/usr/stud/wenb/storage/software/anaconda3/envs/bevfusion-torch190/bin/torchpack dist-run -np 4 python tools/train.py \
+/usr/stud/wenb/storage/codes/bevfusion/config_rigorous/configs_rig_v1.yaml \
  --model.encoders.camera.backbone.init_cfg.checkpoint pretrained/swint-nuimages-pretrained.pth 
+# conda activate bevfusion-torch190
 
