@@ -223,6 +223,8 @@ class NuScenesDataset(Custom3DDataset):
         ego2global[:3, :3] = Quaternion(info["ego2global_rotation"]).rotation_matrix
         ego2global[:3, 3] = info["ego2global_translation"]
         data["ego2global"] = ego2global
+        data["ego2global_translation"] = info["ego2global_translation"]
+        data["ego2global_rotation"] = info["ego2global_rotation"]
 
         # lidar to ego transform
         lidar2ego = np.eye(4).astype(np.float32)

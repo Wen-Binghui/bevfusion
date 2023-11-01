@@ -183,9 +183,13 @@ def _fill_trainval_infos(nusc, train_scenes, val_scenes, test=False, max_sweeps=
         sd_rec = nusc.get("sample_data", sample["data"]["LIDAR_TOP"])
         cs_record = nusc.get("calibrated_sensor", sd_rec["calibrated_sensor_token"])
         pose_record = nusc.get("ego_pose", sd_rec["ego_pose_token"])
-        location = nusc.get(
-            "log", nusc.get("scene", sample["scene_token"])["log_token"]
-        )["location"]
+        scene_record = nusc.get('scene', sample['scene_token'])
+        scene_name = scene_record['name']
+        log_record = nusc.get('log', scene_record['log_token'])
+        location = log_record['location']
+        # location = nusc.get(
+        #     "log", nusc.get("scene", sample["scene_token"])["log_token"]
+        # )["location"]
         lidar_path, boxes, _ = nusc.get_sample_data(lidar_token)
 
         mmcv.check_file_exist(lidar_path)
@@ -201,6 +205,7 @@ def _fill_trainval_infos(nusc, train_scenes, val_scenes, test=False, max_sweeps=
             "ego2global_rotation": pose_record["rotation"],
             "timestamp": sample["timestamp"],
             "location": location,
+            'scene_name': scene_name
         }
 
         l2e_r = info["lidar2ego_rotation"]

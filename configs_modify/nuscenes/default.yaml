@@ -73,6 +73,37 @@ train_pipeline:
   #   remove_close: true
   #   load_augmented: ${load_augmented}
   -
+    type: VectorizeLocalMap
+    data_root: "./data/nuscenes"
+    patch_size: [60, 30]
+    sample_dist: 0.7
+    num_samples: 150
+    sample_pts: False
+    max_len: 30
+    padding: False
+    normalize: True,
+    fixed_num: 
+      ped_crossing: -1
+      divider: -1
+      contours: -1
+      others: -1
+    class2label: 
+      ped_crossing': 0
+      divider: 1
+      contours: 2
+      others: -1
+    centerline: False
+  -
+    type: PolygonizeLocalMapBbox
+    canvas_size: [200, 100]  # xy
+    coord_dim: 2
+    num_class: 3
+    mode: 'xyxy'
+    test_mode: True
+    threshold: 0.02
+    flatten: False
+
+  -
     type: LoadAnnotations3D
     with_bbox_3d: true
     with_label_3d: true
@@ -175,6 +206,7 @@ train_pipeline:
       - gt_bboxes_3d
       - gt_labels_3d
       - gt_masks_bev
+      - polys
     meta_keys:
       - camera_intrinsics
       - camera2ego

@@ -23,7 +23,7 @@ checkpoint_config:
   max_keep_ckpts: 1
 cudnn_benchmark: false
 data:
-  samples_per_gpu: 2
+  samples_per_gpu: 1
   test:
     ann_file: data/nuscenes/nuscenes_infos_val.pkl
     box_type_3d: LiDAR
@@ -54,12 +54,12 @@ data:
     - traffic_cone
     pipeline:
     - to_float32: true
-      type: LoadMultiViewImageFromFiles
+      type: LoadMultiViewImageFromFiles # 读取图片 => PIL
     - coord_type: LIDAR
       load_augmented: null
       load_dim: 5
       reduce_beams: 32
-      type: LoadPointsFromFile
+      type: LoadPointsFromFile # 虚拟点？ egal
       use_dim: 5
     - load_augmented: null
       load_dim: 5
@@ -67,7 +67,7 @@ data:
       reduce_beams: 32
       remove_close: true
       sweeps_num: 9
-      type: LoadPointsFromMultiSweeps
+      type: LoadPointsFromMultiSweeps # 附近帧lidar点
       use_dim: 5
     - type: LoadAnnotations3D
       with_attr_label: false
@@ -207,6 +207,34 @@ data:
         sweeps_num: 9
         type: LoadPointsFromMultiSweeps
         use_dim: 5
+      - type: VectorizeLocalMap
+        data_root: "./data/nuscenes"
+        patch_size: [60, 30]
+        sample_dist: 0.7
+        num_samples: 150
+        sample_pts: False
+        max_len: 30
+        padding: False
+        normalize: True,
+        fixed_num: 
+          ped_crossing: -1
+          divider: -1
+          contours: -1
+          others: -1
+        class2label: 
+          ped_crossing': 0
+          divider: 1
+          contours: 2
+          others: -1
+        centerline: False
+      - type: PolygonizeLocalMapBbox
+        canvas_size: [200, 100]  # xy
+        coord_dim: 2
+        num_class: 3
+        mode: 'xyxy'
+        test_mode: True
+        threshold: 0.02
+        flatten: False
       - type: LoadAnnotations3D
         with_attr_label: false
         with_bbox_3d: true
@@ -367,6 +395,7 @@ data:
         - gt_bboxes_3d
         - gt_labels_3d
         - gt_masks_bev
+        - polys
         meta_keys:
         - camera_intrinsics
         - camera2ego
@@ -646,14 +675,12 @@ input_modality:
   use_radar: false
 load_augmented: null
 load_dim: 5
-load_from: null
+load_from: pretrained/lidar-only-det.pth
 log_config:
   hooks:
   - type: TextLoggerHook
-  - init_kwargs:
-      project: BEVFUSION_v01
-    type: WandbLoggerHook
-  interval: 10
+  - type: TensorboardLoggerHook
+  interval: 50
 lr_config:
   min_lr_ratio: 0.001
   policy: CosineAnnealing
@@ -772,7 +799,7 @@ model:
         - 704
         in_channels: 256
         out_channels: 80
-        type: RigorousDepthLSSTransform_v1
+        type: DepthLSSTransform
         xbound:
         - -54.0
         - 54.0
@@ -974,8 +1001,18 @@ model:
         - 0.075
         - 0.2
       type: TransFusionHead
-  
-  type: BEVFusion
+    vectormap: 
+      type: DGHead
+      augmentation: True
+      num_classes: 3
+      in_channels: 128
+      score_thre: 0.1
+      num_reg_fcs: 2
+      num_points: 4
+      test_cfg: null
+      train_cfg: null
+
+  type: BEVFusionMap
 momentum_config:
   policy: cyclic
 object_classes:
@@ -1006,7 +1043,7 @@ point_cloud_range:
 - 3.0
 reduce_beams: 32
 resume_from: null
-run_dir: runs/run-3e6a424f-e9be4fd8
+run_dir: runs/run-acf7498f-fa11a2d0
 runner:
   max_epochs: 6
   type: CustomEpochBasedRunner
@@ -1267,7 +1304,7 @@ train_pipeline:
   - 0.225
   type: ImageNormalize
 - fixed_prob: true
-  max_epoch: 20
+  max_epoch: 6
   mode: 1
   offset: false
   prob: 0.0
@@ -1295,6 +1332,8 @@ train_pipeline:
   - gt_bboxes_3d
   - gt_labels_3d
   - gt_masks_bev
+  - polys
+
   meta_keys:
   - camera_intrinsics
   - camera2ego

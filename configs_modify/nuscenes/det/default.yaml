@@ -1,5 +1,5 @@
 model:
-  type: BEVFusion
+  type: BEVFusionMap
   encoders: null
   fuser: null
   heads:
