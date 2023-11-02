@@ -2,7 +2,7 @@ from torchpack.utils.config import configs
 from mmcv import Config
 from mmdet3d.utils import get_root_logger, convert_sync_batchnorm, recursive_eval
 from mmdet3d.datasets import build_dataset
-from mmdet3d.models import build_head
+from mmdet3d.models import build_head, build_model
 
 import mmcv
 import matplotlib.pyplot as plt
@@ -21,16 +21,8 @@ def getdata_from_DC(data, name):
 config_path = '/mnt/data/codes/bevfusion/configs_addmap.yaml'
 configs.load(config_path, recursive=True)
 cfg = Config(recursive_eval(configs), filename=config_path)
-# datasets = build_dataset(cfg.data.train)
-# # print(cfg.data.train)
-# # exit()
-# for idx in range(3):
-#     data_ = datasets[idx]
-#     # print(data_['polys'])
+cfg['model']['heads']['vectormap'] = defined_model['head_cfg']
 
 
-
-CONFIG:dict = defined_model['head_cfg']
-# CONFIG.pop('test_cfg') 
-model = build_head(CONFIG)
+model = build_model(cfg.model)
 print(model)

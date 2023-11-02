@@ -244,23 +244,24 @@ class BEVFusionMap(Base3DFusionModel):
                 feature = self.extract_lidar_features(points)
             else:
                 raise ValueError(f"unsupported sensor: {sensor}")
-            features.append(feature)
-
+            features.append(feature) # [1, 80, 180, 180]
+            print(f"sensor {sensor} of shape {feature.shape}") # 
         if not self.training:
             # avoid OOM
             features = features[::-1]
 
         if self.fuser is not None:
-            x = self.fuser(features)
+            x = self.fuser(features) # [1, 256, 180, 180]
         else:
             assert len(features) == 1, features
             x = features[0]
-
+        print(f"after fuser shape {x.shape}")
         batch_size = x.shape[0]
 
         x = self.decoder["backbone"](x)
+        # print(f"after decoder backbone shape {x.shape}")
         x = self.decoder["neck"](x)
-
+        print(f"after decoder neck shape {x.shape}")
         if self.training:
             outputs = {}
             for type, head in self.heads.items():
@@ -269,6 +270,9 @@ class BEVFusionMap(Base3DFusionModel):
                     losses = head.loss(gt_bboxes_3d, gt_labels_3d, pred_dict)
                 elif type == "map":
                     losses = head(x, gt_masks_bev)
+                elif type == "vectormap":
+                    print('detect vector map head')
+                    pass
                 else:
                     raise ValueError(f"unsupported head: {type}")
                 for name, val in losses.items():

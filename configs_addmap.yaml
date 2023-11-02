@@ -1001,16 +1001,16 @@ model:
         - 0.075
         - 0.2
       type: TransFusionHead
-    vectormap: 
-      type: DGHead
-      augmentation: True
-      num_classes: 3
-      in_channels: 128
-      score_thre: 0.1
-      num_reg_fcs: 2
-      num_points: 4
-      test_cfg: null
-      train_cfg: null
+    # vectormap: 
+    #   type: DGHead
+    #   augmentation: True
+    #   num_classes: 3
+    #   in_channels: 128
+    #   score_thre: 0.1
+    #   num_reg_fcs: 2
+    #   num_points: 4
+    #   test_cfg: null
+    #   train_cfg: null
 
   type: BEVFusionMap
 momentum_config:

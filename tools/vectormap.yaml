@@ -1,0 +1,112 @@
+num_class_map: 3
+canvas_size: [200, 100]
+map_pred_head_dim: 256
+type: DGHead
+  augmentation: true
+  augmentation_kwargs: 
+    p: 0.3scale: 0.01
+    bbox_type: xyxy
+  det_net_cfg: 
+      type: MapElementDetector
+      num_query: 120
+      max_lines: 35
+      bbox_size: 2
+      canvas_size: ${canvas_size}
+      separate_detect: false
+      discrete_output: false
+      num_classes: ${num_class_map}
+      in_channels: 128
+      score_thre: 0.1
+      num_reg_fcs: 2
+      num_points: 4
+      iterative: false
+      pc_range: [-15 -30 -5.0 15 30 3.0]
+      sync_cls_avg_factor: true
+      transformer: 
+          type: DeformableDetrTransformer_
+          encoder: 
+              type: PlaceHolderEncoder
+              embed_dims: ${map_pred_head_dim}
+          
+          decoder: 
+              type: DeformableDetrTransformerDecoder_
+              num_layers: 6
+              return_intermediate: true
+              transformerlayers: 
+                  type: DetrTransformerDecoderLayer
+                  attn_cfgs:
+                  - type: MultiheadAttention
+                    embed_dims: ${map_pred_head_dim}
+                    num_heads: 8
+                    attn_drop: 0.1
+                    proj_drop: 0.1
+                    dropout_layer: 
+                      type: Dropout drop_prob: 0.1
+                  - type: MultiScaleDeformableAttention
+                    embed_dims: head_dim
+                    num_heads: 8
+                    num_levels: 1
+                  ffn_cfgs: 
+                      type: FFN
+                      embed_dims: head_dim
+                      feedforward_channels: head_dim*2
+                      num_fcs: 2
+                      ffn_drop: 0.1
+                      act_cfg: type: ReLU inplace: true        
+                  
+                  feedforward_channels: head_dim*2
+                  ffn_dropout: 0.1
+                  operation_order: (norm self_attn norm cross_attn
+                                  norm ffn
+          
+      positional_encoding: 
+          type: SinePositionalEncoding
+          num_feats: head_dim//2
+          normalize: true
+          offset: -0.5
+      loss_cls: 
+          type: FocalLoss
+          use_sigmoid: true
+          gamma: 2.0
+          alpha: 0.25
+          loss_weight: 2.0
+      loss_reg: 
+          type: LinesLoss
+          loss_weight: 0.1
+      train_cfg: 
+          assigner: 
+              type: HungarianLinesAssigner
+              cost: 
+                  type: MapQueriesCost
+                  cls_cost: type: FocalLossCost weight: 2.0
+                  reg_cost: type: BBoxCostC weight: 0.1 # continues
+                  iou_cost: type: IoUCostC weight: 1box_format: xyxy # continues
+                  
+              
+          
+  
+  gen_net_cfg: 
+      type: PolylineGenerator
+      in_channels: 128
+      encoder_config: None
+      decoder_config: {
+              layer_config: {
+                  d_model: 256
+                  nhead: 8
+                  dim_feedforward: 512
+                  dropout: 0.2
+                  norm_first: true
+                  re_zero: true
+              }
+              num_layers: 6
+          }
+      class_conditional: true
+      num_classes: ${num_class_map}
+      canvas_size: canvas_size #xy
+      max_seq_length: 500
+      decoder_cross_attention: false
+      use_discrete_vertex_embeddings: true
+  
+max_num_vertices: 80
+top_p_gen_model: 0.9
+sync_cls_avg_factor: true
