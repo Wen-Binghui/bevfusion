@@ -107,17 +107,17 @@ class VectorizeLocalMap(object):
         self.size = np.array([self.patch_size[1], self.patch_size[0]]) + 2
 
 
-    def retrive_geom(self, patch_params):
+    def retrive_geom(self, patch_params) -> Dict[str, List]:
         '''
             Get the geometric data.
-            Returns: dict
+            Returns: dict of [list of Geom]
         '''
         patch_box, patch_angle, location = patch_params
         geoms_dict = {}
 
         layers = \
             self.line_classes + self.ped_crossing_classes + \
-            self.contour_classes
+            self.contour_classes # 预定义好的道路层
 
         layers = set(layers)
         for layer_name in layers:
@@ -144,14 +144,17 @@ class VectorizeLocalMap(object):
 
         return geoms_dict
 
-    def union_geoms(self, geoms_dict):
+    def union_geoms(self, geoms_dict) -> Dict[str, Tuple[str, List[MultiPolygon]]]:
+        """
+            将几种路标转换为想要的三种, [contours, ped_crossing, divider], 内层仍为geom格式
 
+        """
         customized_geoms_dict = {}
 
         # contour
         roads = geoms_dict['road_segment']
         lanes = geoms_dict['lane']
-        union_roads = ops.unary_union(roads)
+        union_roads = ops.unary_union(roads) # 重叠的多边形会被合并，相交的线会被打断
         union_lanes = ops.unary_union(lanes)
         union_segments = ops.unary_union([union_roads, union_lanes])
         if union_segments.geom_type != 'MultiPolygon':
@@ -164,7 +167,7 @@ class VectorizeLocalMap(object):
 
         for layer_name, custom_class in self.layer2class.items():
 
-            if custom_class == 'contours':
+            if custom_class == 'contours': # skip contours
                 continue
 
             customized_geoms_dict[layer_name] = (
@@ -216,17 +219,30 @@ class VectorizeLocalMap(object):
 
         return final_pgeom
 
-    def convert2vec(self, geoms_dict: dict, sample_pts=False, override_veclen: int = None):
-
-        vector_dict = {}
+    def convert2vec(self, geoms_dict: Dict[str, Tuple[str, List[MultiPolygon]]], sample_pts=False, override_veclen: int = None):
+        """
+        return:
+            vector_dict: {layer_name: 
+                {
+                    (customized_class, 
+                        {
+                        'vectors': List[ndarray],
+                        'length': int
+                        }
+                    )
+                }
+            }
+        
+        """
+        vector_dict:Dict[str, Dict[str, list]] = {} 
         for layer_name, (customized_class, geoms) in geoms_dict.items():
 
-            line_strings = self.process_func[customized_class](geoms)
-            vector_len = self.fixed_num[customized_class]
+            line_strings: List[LineString] = self.process_func[customized_class](geoms) # 各自一个方程，转为
+            vector_len = self.fixed_num[customized_class] # -1 
             if override_veclen is not None:
                 vector_len = override_veclen
 
-            vectors = self._geom_to_vectors(
+            vectors: Dict[str, list] = self._geom_to_vectors(
                 line_strings, customized_class, vector_len, sample_pts)
             vector_dict.update({layer_name: (customized_class, vectors)})
 
@@ -234,14 +250,15 @@ class VectorizeLocalMap(object):
 
     def _geom_to_vectors(self, line_geom, label, vector_len, sample_pts=False):
         '''
-            transfrom the geo type 2 line vectors
+            transfrom the geo type to line vectors,
+            中间过程会对Vector nomalize
         '''
         line_vectors = {'vectors': [], 'length': []}
         for line in line_geom:
             if not line.is_empty:
                 if line.geom_type == 'MultiLineString':
                     for l in line:
-                        if sample_pts:
+                        if sample_pts: # False
                             v, nl = self._sample_pts_from_line(
                                 l, label, vector_len)
                         else:
@@ -297,17 +314,17 @@ class VectorizeLocalMap(object):
 
         return results
 
-    def ped_geoms_to_vectors(self, geoms: list):
+    def ped_geoms_to_vectors(self, geoms: list) -> List[LineString]:
 
-        max_x = self.patch_size[1] / 2
-        max_y = self.patch_size[0] / 2
+        max_x = self.patch_size[1] / 2 # 60/2
+        max_y = self.patch_size[0] / 2 # 30/2
         local_patch = box(-max_x + 0.2, -max_y + 0.2, max_x - 0.2, max_y - 0.2)
         results = []
         for geom in geoms:
             for ped_poly in geom:
                 # rect = ped_poly.minimum_rotated_rectangle
                 ext = ped_poly.exterior
-                if not ext.is_ccw:
+                if not ext.is_ccw: # Returns True if a linestring or linearring is counterclockwise.
                     ext.coords = list(ext.coords)[::-1]
                 lines = ext.intersection(local_patch)
 
@@ -331,7 +348,7 @@ class VectorizeLocalMap(object):
         # XXX
         return geom
 
-    def _geoms2pts(self, line, label, fixed_point_num):
+    def _geoms2pts(self, line: LineString, label, fixed_point_num):
 
         # if we still use the fix point
         if fixed_point_num > 0:
@@ -467,8 +484,14 @@ class VectorizeLocalMap(object):
 
         return line
 
+    
     def get_global_patch(self, input_dict: dict):
-        # transform to global coordination
+        """transform to global coordination
+        Args:
+            
+        Outpus: 
+            (patch_box, patch_angle(deg), location)
+        """
         location = input_dict['location']
         ego2global_translation = input_dict['ego2global_translation']
         ego2global_rotation = input_dict['ego2global_rotation']
@@ -482,7 +505,11 @@ class VectorizeLocalMap(object):
         return patch_params
 
     def vectorization(self, input_dict: dict):
-
+        '''
+            add 'vectors' in input_dict:
+                input_dict['vectors'] is a List of (vec[list of ndarray], length[int], label[int])
+        
+        '''
         patch_params = self.get_global_patch(input_dict)
 
         # Retrive geo
@@ -499,12 +526,10 @@ class VectorizeLocalMap(object):
         #                origin=False, token=input_dict['token'])
 
         # format the outputs list
-        vectors = []
-        for k, (custom_class, v) in vectors_dict.items():
-
+        vectors:List[Tuple[list, int, int]] = []
+        for _layername, (custom_class, v) in vectors_dict.items():
             label = self.class2label.get(custom_class, -1)
-            # filter out -1
-            if label == -1:
+            if label == -1: # filter out -1
                 continue
 
             for vec, l in zip(v['vectors'], v['length']):

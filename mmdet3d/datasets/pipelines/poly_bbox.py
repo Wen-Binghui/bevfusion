@@ -31,11 +31,15 @@ def evaluate_lin_curvature(polyline):
 
 
 def evaluate_line(polyline, curvature=False):
+    '''
+        return:
+         shape: (2*polyline.shape[0] + 1, )
+    
+    '''
+    edge = np.linalg.norm(polyline[1:] - polyline[:-1], axis=-1) # length of each line
 
-    edge = np.linalg.norm(polyline[1:] - polyline[:-1], axis=-1)
-
-    start_end_weight = edge[(0, -1), ].copy()
-    mid_weight = (edge[:-1] + edge[1:]) * .5
+    start_end_weight = edge[(0, -1), ].copy() # length of start and end
+    mid_weight = (edge[:-1] + edge[1:]) * .5 # 中间部分的长度均值
 
     pts_weight = np.concatenate(
         (start_end_weight[:1], mid_weight, start_end_weight[-1:]))
@@ -45,7 +49,7 @@ def evaluate_line(polyline, curvature=False):
 
     pts_weight /= denominator
 
-    if curvature and polyline.shape[0] > 2:
+    if curvature and polyline.shape[0] > 2: # Skip
         weight_c = evaluate_lin_curvature(polyline)
 
         pts_weight_c = pts_weight.copy()
@@ -54,8 +58,8 @@ def evaluate_line(polyline, curvature=False):
         pts_weight = (pts_weight+pts_weight_c)/2
 
     # add weights for stop index
-    pts_weight = np.repeat(pts_weight, 2)/2
-    pts_weight = np.pad(pts_weight, ((0, 1)),
+    pts_weight = np.repeat(pts_weight, 2)/2 # shape(2n,) 相邻两个相同
+    pts_weight = np.pad(pts_weight, ((0, 1)), # 前面填充0个，后面填充一个
                         constant_values=1/(len(polyline)*2))
 
     return pts_weight
@@ -66,7 +70,7 @@ def quantize_verts(
         canvas_size=(400, 200, 100),
         coord_dim=3,
 ):
-    """Convert vertices from its original range ([-1,1]) to discrete values in [0, n_bits**2 - 1].
+    """Convert vertices from its original range ([0, 1]) to discrete values in [0, n_bits**2 - 1].
         Args:
             verts: seqlen, 2
     """
@@ -85,6 +89,9 @@ def get_bbox(
         polyline_nd, mode='xyxy', threshold=6, num_points=10, random=False):
     '''
         polyline: seq_len, coord_dim
+
+        return:
+            np.array([[minx, miny], [maxx, maxy]])
     '''
 
     if mode == 'xyxy':
@@ -93,7 +100,7 @@ def get_bbox(
         minx, miny, maxx, maxy = bbox
         W, H = maxx-minx, maxy-miny
 
-        if W < threshold or H < threshold:
+        if W < threshold or H < threshold: # 如果太小，垫大
             remain = (threshold - min(W, H))/2
             bbox = polyline.buffer(remain).envelope.bounds
             minx, miny, maxx, maxy = bbox
@@ -175,17 +182,18 @@ class PolygonizeLocalMapBbox(object):
                 polyline, valid_len, label, line_type = vector_data
 
             # and pad polyline.
-            if label == 2:
+            if label == 2: #! contours
                 polyline_weight = evaluate_line(polyline).reshape(-1)
-            else:
+            else: # 同样权重
                 polyline_weight = np.ones_like(polyline).reshape(-1)
                 polyline_weight = np.pad(
                     polyline_weight, ((0, 1),), constant_values=1.)
                 polyline_weight = polyline_weight/polyline_weight.sum()
-
-            #flatten and quantilized
+                # polyline_weight of shape (polyline.shape[0]*2+1, )
+            
+            #flatten(False) and quantilized
             fpolyline = quantize_verts(
-                polyline, self.canvas_size, self.coord_dim)
+                polyline, self.canvas_size, self.coord_dim) #! int32
             fpolyline = fpolyline.reshape(-1)
 
             # reindex starting from 1, and add a zero stopping token(EOS),
@@ -219,7 +227,7 @@ class PolygonizeLocalMapBbox(object):
 
         kps, kp_labels = [], []
         qkps, qkp_masks = [], []
-        mode = self.mode if not centerline else 'centerline_keypoint'
+        mode = self.mode if not centerline else 'centerline_keypoint' # XYXY
 
         # quantilize each label's lines individually.
         for vector_data in vectors:
@@ -243,7 +251,7 @@ class PolygonizeLocalMapBbox(object):
                                mode, self.threshold, self.num_point, random=True)
 
             # flatten and quantilized
-            fkp = quantize_verts(gkp, self.canvas_size, self.coord_dim)
+            fkp = quantize_verts(gkp, self.canvas_size, self.coord_dim) # 把bbox也换为canvas index
             fkp = fkp.reshape(-1)
 
             # Reindex starting from 1, and add a class token,
@@ -262,11 +270,11 @@ class PolygonizeLocalMapBbox(object):
             qkp_msks = np.pad(
                 np.concatenate(qkp_masks), ((0, 1),), constant_values=1)
         else:
-            qkps = np.stack(qkps)
-            qkp_msks = np.stack(qkp_masks)
+            qkps = np.stack(qkps) # 4 * n
+            qkp_msks = np.stack(qkp_masks) # 4 * n
 
         # format det
-        kps = np.stack(kps, axis=0).astype(np.float32)*self.canvas_size
+        kps = np.stack(kps, axis=0).astype(np.float32)*self.canvas_size # 浮点，范围为 canvas
         kp_labels = np.array(kp_labels)
         # restrict the boundary
         kps[..., 0] = np.clip(kps[..., 0], 0.1, self.canvas_size[0]-0.1)
@@ -287,7 +295,7 @@ class PolygonizeLocalMapBbox(object):
         '''
         # vectors = input_dict.pop('vectors')
         vectors = input_dict['vectors']
-        if not len(vectors):
+        if not len(vectors): # 如果没有vectors, 返回空polys列表
             input_dict['polys'] = []
             return input_dict
 
@@ -303,23 +311,22 @@ class PolygonizeLocalMapBbox(object):
         # gather
         polys = {
             # for det
-            'keypoint': keypoint,
-            'det_label': keypoint_label,
+            'keypoint': keypoint, # np.array float
+            'det_label': keypoint_label, # np.array int
 
             # for gen
-            'gen_label': keypoint_label,
-            'qkeypoint': qkeypoint,
-            'qkeypoint_mask': qkeypoint_mask,
+            'gen_label': keypoint_label, # np.array int
+            'qkeypoint': qkeypoint, # np.array int32
+            'qkeypoint_mask': qkeypoint_mask, # np.array int
 
             # nlines(nbox) List[ seq_len*coord_dim ]
-            'polylines': polyline_map,  # List[np.array]
+            'polylines': polyline_map, # List[np.array int32] 
             'polyline_masks': polyline_map_mask,  # List[np.array]
-            'polyline_weights': polyline_map_weight,
+            'polyline_weights': polyline_map_weight, # List[np.array float] 
         }
 
         # Format outputs
         input_dict['polys'] = polys
-
         return input_dict
 
     def __call__(self, input_dict: dict):

@@ -340,11 +340,14 @@ class BEVFusionMap(Base3DFusionModel):
                     losses = head(x, gt_masks_bev)
                 elif type == "vectormap":
                     map_target = {}
-                    bev_feats = x[0][:, :, 90-25:90+25, 90-50:90+50]
+                    
                     # try:
                     valid_idx = [i for i in range(len(polys)) if len(polys[i])]
                     polys = [polys[i] for i in valid_idx]
+                    
+
                     if len(valid_idx) != 0:
+                        bev_feats = x[0][valid_idx, :, 90-25:90+25, 90-50:90+50]
                         map_target['det'] = format_det(polys, x[0].device)
                         map_target['gen'] = format_gen(polys, x[0].device)
                         # bev_feats = bev_feats.float()
