@@ -1,6 +1,7 @@
 # Copyright (c) OpenMMLab. All rights reserved.
 import math
 import warnings
+from mmcv.runner import force_fp32
 
 import torch
 import torch.nn as nn
@@ -63,6 +64,7 @@ class DeformableDetrTransformerDecoder_(TransformerLayerSequence):
         self.coord_dim = coord_dim
         self.kp_coord_dim = kp_coord_dim
 
+    # @force_fp32()    
     def forward(self,
                 query,
                 *args,
@@ -179,7 +181,7 @@ class DeformableDetrTransformer_(Transformer):
         for m in self.modules():
             if isinstance(m, MultiScaleDeformableAttention):
                 m.init_weights()
-            elif isinstance(m,MultiScaleDeformableAttentionFp16):
+            elif isinstance(m, MultiScaleDeformableAttentionFp16):
                 m.init_weights()
         if not self.as_two_stage:
             xavier_init(self.reference_points_embed, distribution='uniform', bias=0.)
@@ -247,7 +249,7 @@ class DeformableDetrTransformer_(Transformer):
         pos = torch.stack((pos[:, :, :, 0::2].sin(), pos[:, :, :, 1::2].cos()),
                           dim=4).flatten(2)
         return pos
-
+    
     def forward(self,
                 mlvl_feats,
                 mlvl_masks,

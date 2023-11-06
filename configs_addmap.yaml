@@ -23,7 +23,7 @@ checkpoint_config:
   max_keep_ckpts: 1
 cudnn_benchmark: false
 data:
-  samples_per_gpu: 1
+  samples_per_gpu: 2
   test:
     ann_file: data/nuscenes/nuscenes_infos_val.pkl
     box_type_3d: LiDAR
@@ -222,7 +222,7 @@ data:
           contours: -1
           others: -1
         class2label: 
-          ped_crossing': 0
+          ped_crossing: 0
           divider: 1
           contours: 2
           others: -1
@@ -235,6 +235,7 @@ data:
         test_mode: True
         threshold: 0.02
         flatten: False
+      - type: FormatBundleMap
       - type: LoadAnnotations3D
         with_attr_label: false
         with_bbox_3d: true
@@ -662,7 +663,7 @@ evaluation:
     type: Collect3D
 fp16:
   loss_scale:
-    growth_interval: 2000
+    growth_interval: 2000000
 gt_paste_stop_epoch: -1
 image_size:
 - 256
@@ -679,8 +680,8 @@ load_from: pretrained/lidar-only-det.pth
 log_config:
   hooks:
   - type: TextLoggerHook
-  - type: TensorboardLoggerHook
-  interval: 50
+  # - type: TensorboardLoggerHook
+  interval: 5
 lr_config:
   min_lr_ratio: 0.001
   policy: CosineAnnealing

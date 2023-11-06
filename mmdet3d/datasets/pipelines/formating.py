@@ -195,3 +195,48 @@ class Collect3D:
 
         data["metas"] = DC(metas, cpu_only=True)
         return data
+
+
+
+@PIPELINES.register_module()
+class FormatBundleMap(object):
+    """Format data for map tasks and then collect data for mdeol input.
+
+    These fields are formatted as follows.
+
+    - img: (1)transpose, (2)to tensor, (3)to DataContainer (stack=True)
+    - semantic_mask (in exists): (1)to tensor, (2)to DataContainer (stack=True)
+    - vectors: (1)to DataContainer (cpu_only=True)
+    - img_metas: (1)to DataContainer (cpu_only=True)
+    """
+
+    def __init__(self):
+        pass
+
+    def __call__(self, results):
+        """Call function to transform and format common fields in results.
+
+        Args:
+            results (dict): Result dict contains the data to convert.
+
+        Returns:
+            dict: The result dict contains the data that is formatted with
+                default bundle.
+        """
+     
+        if 'vectors' in results:
+            # vectors may have different sizes
+            vectors = results['vectors']
+            results['vectors'] = DC(vectors, stack=False, cpu_only=True)
+        
+        # same with above
+        if 'polys' in results:
+            results['polys'] = DC(results['polys'], stack=False, cpu_only=True)
+
+        
+        return results
+
+    def __repr__(self):
+        """str: Return a string that describes the module."""
+        repr_str = self.__class__.__name__
+        return repr_str

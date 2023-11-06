@@ -18,7 +18,7 @@ class MapElementDetector(DETRBboxHead):
         super(MapElementDetector, self).__init__(*args, **kwargs)
 
     def _init_embedding(self):
-
+ 
         self.label_embed = nn.Embedding(
             self.num_classes, self.embed_dims)
 

@@ -51,8 +51,8 @@ class BaseTransform(nn.Module):
 
     @force_fp32()
     def create_frustum(self):
-        iH, iW = self.image_size
-        fH, fW = self.feature_size
+        iH, iW = self.image_size # 256 - 704
+        fH, fW = self.feature_size # 32 - 88
 
         ds = (
             torch.arange(*self.dbound, dtype=torch.float)
@@ -72,7 +72,7 @@ class BaseTransform(nn.Module):
             .expand(D, fH, fW)
         )
 
-        frustum = torch.stack((xs, ys, ds), -1)
+        frustum = torch.stack((xs, ys, ds), -1) # D, fH, fW, 3
         return nn.Parameter(frustum, requires_grad=False)
 
     @force_fp32()
@@ -125,7 +125,7 @@ class BaseTransform(nn.Module):
         raise NotImplementedError
 
     @force_fp32()
-    def bev_pool(self, geom_feats, x):
+    def bev_pool(self, geom_feats, x:torch.Tensor):
         B, N, D, H, W, C = x.shape
         Nprime = B * N * D * H * W
 

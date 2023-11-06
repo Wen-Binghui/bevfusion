@@ -35,7 +35,7 @@ from torch.cuda.amp import custom_bwd, custom_fwd
 @ATTENTION.register_module()
 class MultiScaleDeformableAttentionFp16(BaseModule):
 
-    def __init__(self, attn_cfg=None,init_cfg=None,**kwarg):
+    def __init__(self, attn_cfg=None, init_cfg=None,**kwarg):
         super(MultiScaleDeformableAttentionFp16,self).__init__(init_cfg)
 
         # import ipdb; ipdb.set_trace()
@@ -55,7 +55,7 @@ class MultiScaleDeformableAttentionFp16(BaseModule):
                 spatial_shapes=None,
                 level_start_index=None,
                 **kwargs):
-        # import ipdb; ipdb.set_trace()
+
         return self.deformable_attention(query,
                 key=key,
                 value=value,

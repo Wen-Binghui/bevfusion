@@ -1,6 +1,7 @@
 import copy
 import torch
 import torch.nn as nn
+from mmcv.runner import auto_fp16, force_fp32
 
 from mmdet3d.models.builder import HEADS, build_head
 from .base_map_head import BaseMapHead
@@ -47,7 +48,7 @@ class DGHead(BaseMapHead):
             self.augmentation = NoiseSythesis(**augmentation_kwargs)
         
         self.joint_training = joint_training
-
+    
     def forward(self, batch, img_metas=None, **kwargs):
         '''
             Args:

@@ -121,13 +121,12 @@ class Voxelization(nn.Module):
     def forward(self, input):
         """
         Args:
-            input: NC points
+            input: NC points # e.g. torch.Size([252608, 5])
         """
         if self.training:
             max_voxels = self.max_voxels[0]
         else:
             max_voxels = self.max_voxels[1]
-
         return voxelization(
             input,
             self.voxel_size,

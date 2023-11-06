@@ -100,7 +100,7 @@ model = dict(
             separate_detect=False,
             discrete_output=False,
             num_classes=num_class,
-            in_channels=128,
+            in_channels=512,
             score_thre=0.1,
             num_reg_fcs=2,
             num_points=4,
@@ -128,11 +128,21 @@ model = dict(
                                 proj_drop=0.1,
                                 dropout_layer=dict(type='Dropout', drop_prob=0.1),),
                             dict(
-                                type='MultiScaleDeformableAttention',
-                                embed_dims=head_dim,
-                                num_heads=8,
-                                num_levels=1,
+                                type='MultiScaleDeformableAttentionFp16',
+                                init_cfg = None,
+                                attn_cfg = dict(
+                                        type='MultiScaleDeformableAttention',
+                                        embed_dims=head_dim,
+                                        num_heads=8,
+                                        num_levels=1,
+                                    )
                                 ),
+                            # dict(
+                            #         type='MultiScaleDeformableAttention',
+                            #         embed_dims=head_dim,
+                            #         num_heads=8,
+                            #         num_levels=1,
+                            #     ),
                         ],
                         ffn_cfgs=dict(
                             type='FFN',
@@ -175,7 +185,7 @@ model = dict(
         ),
         gen_net_cfg=dict(
             type='PolylineGenerator',
-            in_channels=128,
+            in_channels=512,
             encoder_config=None,
             decoder_config={
                     'layer_config': {

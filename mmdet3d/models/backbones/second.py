@@ -67,7 +67,7 @@ class SECOND(BaseModule):
             block = nn.Sequential(*block)
             blocks.append(block)
 
-        self.blocks = nn.ModuleList(blocks)
+        self.blocks = nn.ModuleList(blocks) # 3 blocks
 
         assert not (
             init_cfg and pretrained
@@ -94,4 +94,4 @@ class SECOND(BaseModule):
         for i in range(len(self.blocks)):
             x = self.blocks[i](x)
             outs.append(x)
-        return tuple(outs)
+        return tuple(outs) # len = len(layer_nums) = 3
