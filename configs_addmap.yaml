@@ -683,7 +683,7 @@ log_config:
   hooks:
   - type: TextLoggerHook
   # - type: TensorboardLoggerHook
-  interval: 5
+  interval: 25
 lr_config:
   min_lr_ratio: 0.001
   policy: CosineAnnealing

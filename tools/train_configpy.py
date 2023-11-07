@@ -10,12 +10,13 @@ from mmcv import Config
 from torchpack import distributed as dist
 from torchpack.environ import auto_set_run_dir, set_run_dir
 from torchpack.utils.config import configs
-
+import mmcv
 from mmdet3d.apis import train_model
 from mmdet3d.datasets import build_dataset
 from mmdet3d.models import build_model
 from mmdet3d.utils import get_root_logger, convert_sync_batchnorm, recursive_eval
 from vectormapnet_debug import model as defined_model
+import sys
 
 
 def main():
@@ -24,12 +25,10 @@ def main():
     parser.add_argument("config", metavar="FILE", help="config file")
     parser.add_argument("--run-dir", metavar="DIR", help="run directory")
     args, opts = parser.parse_known_args()
-
-    configs.load(args.config, recursive=True)
     configs.update(opts)
-
-    cfg = Config(recursive_eval(configs), filename=args.config)
-    cfg["model"]["heads"]["vectormap"] = defined_model["head_cfg"]
+    cfg = Config.fromfile(filename=args.config)
+    cfg.merge_from_dict(recursive_eval(configs))
+    # cfg["model"]["heads"]["vectormap"] = defined_model["head_cfg"]
     torch.backends.cudnn.benchmark = cfg.cudnn_benchmark
     torch.cuda.set_device(dist.local_rank())
 
@@ -40,8 +39,7 @@ def main():
     cfg.run_dir = args.run_dir
 
     # dump config
-    cfg.dump(os.path.join(cfg.run_dir, "configs.yaml"))
-
+    mmcv.dump(cfg._cfg_dict.to_dict(), os.path.join(cfg.run_dir, "configs.yaml"))
     # init the logger before other steps
     timestamp = time.strftime("%Y%m%d_%H%M%S", time.localtime())
     log_file = os.path.join(cfg.run_dir, f"{timestamp}.log")

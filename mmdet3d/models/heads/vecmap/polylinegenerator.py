@@ -146,12 +146,9 @@ class PolylineGenerator(nn.Module):
                 [global_context_embedding[:, None], bbox_embeddings], dim=1)
 
         # Pass images through encoder
-        print("batch['lines_bs_idx']", batch['lines_bs_idx'], batch['lines_bs_idx'].shape)
         image_embeddings = assign_bev(
             context['bev_embeddings'], batch['lines_bs_idx']) # [B, 512, 50, 100]\
-        print('image_embeddings', image_embeddings.shape)
         image_embeddings = self.input_proj(image_embeddings)
-        print('image_embeddings after proj', image_embeddings.shape)
         device = image_embeddings.device
 
         # Add 2D coordinate grid embedding
@@ -163,8 +160,6 @@ class PolylineGenerator(nn.Module):
         image_coord_embeddings = self.img_coord_embed(image_coords)
 
         image_embeddings += image_coord_embeddings[None].permute(0, 3, 1, 2)
-        print('image_embeddings after adding', image_embeddings.shape)
-        # print('image_embeddings', image_embeddings.shape)
         # Reshape spatial grid to sequence
         B = image_embeddings.shape[0]
         sequential_context_embeddings = image_embeddings.reshape(
@@ -242,15 +237,12 @@ class PolylineGenerator(nn.Module):
         #         polyline_logits[i] = _poly_logits
 
         i, _poly_logits, size = 0, polyline_logits[0], sizes[0]
-        print('===== _poly_logits!!!! ', _poly_logits.shape)
         _poly_logits = F.pad(_poly_logits, (0, 0, 0, sizes[1]-size), "constant", 0)
-        print('===== after pad _poly_logits!!!! ', _poly_logits.shape)
         polyline_logits[i] = _poly_logits
 
         #===============================================================================
         polyline_logits = torch.cat(polyline_logits, 0)
         polyline_logits = polyline_logits[revert_idx]
-        print('===== final!!!! ', polyline_logits.shape)
         cat_dist = Categorical(logits=polyline_logits)
 
         return {'polylines': cat_dist}    
