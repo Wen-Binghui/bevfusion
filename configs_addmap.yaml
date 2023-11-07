@@ -23,7 +23,7 @@ checkpoint_config:
   max_keep_ckpts: 1
 cudnn_benchmark: false
 data:
-  samples_per_gpu: 2
+  samples_per_gpu: 1
   test:
     ann_file: data/nuscenes/nuscenes_infos_val.pkl
     box_type_3d: LiDAR
@@ -228,7 +228,7 @@ data:
           others: -1
         centerline: False
       - type: PolygonizeLocalMapBbox
-        canvas_size: [200, 100]  # xy
+        canvas_size: [100, 50]  # xy
         coord_dim: 2
         num_class: 3
         mode: 'xyxy'
@@ -663,7 +663,9 @@ evaluation:
     type: Collect3D
 fp16:
   loss_scale:
-    growth_interval: 2000000
+    # growth_interval: 20000
+    growth_interval: 2000
+    # dynamic
 gt_paste_stop_epoch: -1
 image_size:
 - 256

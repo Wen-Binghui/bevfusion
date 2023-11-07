@@ -24,7 +24,7 @@ class2label = {
 
 # rasterize params
 roi_size = (60, 30)
-canvas_size = (200, 100)
+canvas_size = (100, 50)
 thickness = 3
 
 # vectorize params
@@ -127,15 +127,21 @@ model = dict(
                                 attn_drop=0.1,
                                 proj_drop=0.1,
                                 dropout_layer=dict(type='Dropout', drop_prob=0.1),),
+                            # dict(
+                            #     type='MultiScaleDeformableAttentionFp16',
+                            #     init_cfg = None,
+                            #     attn_cfg = dict(
+                            #             type='MultiScaleDeformableAttention',
+                            #             embed_dims=head_dim,
+                            #             num_heads=8,
+                            #             num_levels=1,
+                            #         )
+                            #     ), # MultiScaleDeformableAttentionFP32
                             dict(
-                                type='MultiScaleDeformableAttentionFp16',
-                                init_cfg = None,
-                                attn_cfg = dict(
-                                        type='MultiScaleDeformableAttention',
-                                        embed_dims=head_dim,
-                                        num_heads=8,
-                                        num_levels=1,
-                                    )
+                                    type='MultiScaleDeformableAttentionFP32',
+                                    embed_dims=head_dim,
+                                    num_heads=8,
+                                    num_levels=1,
                                 ),
                             # dict(
                             #         type='MultiScaleDeformableAttention',

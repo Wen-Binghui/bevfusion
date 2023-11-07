@@ -52,12 +52,12 @@ def format_gen(polys, device):
     
         # convert to cuda tensor
         for k in poly.keys():
-            if isinstance(poly[k],np.ndarray):
+            if isinstance(poly[k], np.ndarray):
                 poly[k] = torch.from_numpy(poly[k]).to(device)
-            else:
+            else: # List of ndarray
                 poly[k] = [torch.from_numpy(v).to(device) for v in poly[k]]
         
-        line_cls += poly['gen_label']
+        line_cls += poly['gen_label'] # torch Tensor
         line_bs_idx += [batch_idx]*len(poly['gen_label'])
 
         # condition
@@ -224,7 +224,7 @@ class BEVFusionMap(Base3DFusionModel):
 
         return feats, coords, sizes
 
-    @auto_fp16(apply_to=("img", "points"))
+    # @auto_fp16(apply_to=("img", "points"))
     def forward(
         self,
         img,
@@ -268,8 +268,7 @@ class BEVFusionMap(Base3DFusionModel):
             )
             return outputs
 
-    @auto_fp16(apply_to=("img", "points"))
-    # @force_fp32()
+    # @auto_fp16(apply_to=("img", "points"))
     def forward_single(
         self,
         img,
@@ -289,7 +288,6 @@ class BEVFusionMap(Base3DFusionModel):
         gt_labels_3d=None,
         **kwargs,
     ):
-        # print(img[0].dtype)
         features = []
         for sensor in (
             self.encoders if self.training else list(self.encoders.keys())[::-1] # 不是训练反向读
@@ -323,12 +321,8 @@ class BEVFusionMap(Base3DFusionModel):
         else:
             assert len(features) == 1, features
             x = features[0]
-        # print(f"after fuser shape {x.shape}") # [1, 256, 180, 180]
         batch_size = x.shape[0] 
-        # print('features', features[0].dtype)
-        # print('x', x.dtype)
         x = self.decoder["backbone"](x) # model: SECOND (output tuple of len 3)
-        # print('x backbone', x[0].dtype)
         x = self.decoder["neck"](x) # model: SECONDFPN (output list of len 1) [1, 512, 180, 180] #! AUTOFP16 removed
         if self.training:
             outputs = {}
@@ -350,14 +344,12 @@ class BEVFusionMap(Base3DFusionModel):
                         bev_feats = x[0][valid_idx, :, 90-25:90+25, 90-50:90+50]
                         map_target['det'] = format_det(polys, x[0].device)
                         map_target['gen'] = format_gen(polys, x[0].device)
-                        # bev_feats = bev_feats.float()
-                        # print(bev_feats.dtype)
                         _, losses = \
                                 head(map_target, 
                                     context={
                                         'bev_embeddings': bev_feats, 
                                         'img_shape': [256, 704]},
-                                        only_det=False)
+                                    only_det=False)
                     else:
                         losses = {}
                 else:

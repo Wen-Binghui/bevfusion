@@ -6,6 +6,7 @@ from mmcv.runner import BaseModule
 from torch import nn as nn
 
 from mmdet.models import BACKBONES
+from mmcv.runner import auto_fp16, force_fp32
 
 __all__ = ["SECOND"]
 
@@ -80,7 +81,8 @@ class SECOND(BaseModule):
             self.init_cfg = dict(type="Pretrained", checkpoint=pretrained)
         else:
             self.init_cfg = dict(type="Kaiming", layer="Conv2d")
-
+    
+    # @auto_fp16()
     def forward(self, x):
         """Forward function.
 

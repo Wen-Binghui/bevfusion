@@ -162,6 +162,7 @@ class PolylineGenerator(nn.Module):
 
         image_embeddings += image_coord_embeddings[None].permute(0, 3, 1, 2)
 
+        # print('image_embeddings', image_embeddings.shape)
         # Reshape spatial grid to sequence
         B = image_embeddings.shape[0]
         sequential_context_embeddings = image_embeddings.reshape(

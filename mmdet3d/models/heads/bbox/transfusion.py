@@ -4,7 +4,7 @@ import numpy as np
 import torch
 import torch.nn.functional as F
 from mmcv.cnn import ConvModule, build_conv_layer
-from mmcv.runner import force_fp32
+from mmcv.runner import force_fp32, auto_fp16
 from torch import nn
 
 from mmdet3d.core import (
@@ -339,7 +339,8 @@ class TransFusionHead(nn.Module):
             else:
                 new_res[key] = ret_dicts[0][key]
         return [new_res]
-
+    
+    # @auto_fp16(apply_to=('feats'))
     def forward(self, feats, metas):
         """Forward pass.
         Args:

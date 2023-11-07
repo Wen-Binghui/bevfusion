@@ -55,7 +55,7 @@ class DGHead(BaseMapHead):
             Returns:
                 outs (Dict):   
         '''
-
+        
         if self.training:
             return self.forward_train(batch, **kwargs)
         else:
