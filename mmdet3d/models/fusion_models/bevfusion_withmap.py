@@ -71,6 +71,7 @@ def format_gen(polys, device):
     batch = {}
     batch['lines_bs_idx'] = torch.tensor(
         line_bs_idx, dtype=torch.long, device=device)
+    print("batch['lines_bs_idx']", batch['lines_bs_idx'])
     batch['lines_cls'] = torch.tensor(
         line_cls, dtype=torch.long, device=device)
     batch['bbox_flat'] = torch.stack(bbox, 0)

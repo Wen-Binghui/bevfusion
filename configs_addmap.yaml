@@ -1030,6 +1030,7 @@ object_classes:
 - pedestrian
 - traffic_cone
 optimizer:
+  # lr: 0.0002
   lr: 0.0002
   type: AdamW
   weight_decay: 0.01

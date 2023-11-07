@@ -80,7 +80,6 @@ class DGHead(BaseMapHead):
 
             if bbox_flat is None:
                 bbox_flat = batch['gen']['bbox_flat']
-            
             gen_input = dict(
                 lines_bs_idx=batch['gen']['lines_bs_idx'],
                 lines_cls=batch['gen']['lines_cls'],
