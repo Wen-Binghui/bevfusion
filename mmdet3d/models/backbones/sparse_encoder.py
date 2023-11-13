@@ -128,7 +128,7 @@ class SparseEncoder(nn.Module):
         N, C, H, W, D = spatial_features.shape
         spatial_features = spatial_features.permute(0, 1, 4, 2, 3).contiguous()
         spatial_features = spatial_features.view(N, C * D, H, W)
-        print("spatial_features", spatial_features.shape)
+        # print("spatial_features", spatial_features.shape)
         return spatial_features
 
     def make_encoder_layers(

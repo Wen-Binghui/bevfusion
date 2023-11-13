@@ -6,7 +6,8 @@ log_config = dict(
     interval=10,
     hooks=[
         dict(type="TextLoggerHook"),
-        # dict(type="WandbLoggerHook", init_kwargs={"project": "BEVFUSION_ORI_bs3"}),
+        dict(type="WandbLoggerHook", init_kwargs={"project": "OBJMAP_bs1_gpu1"}),
+        dict(type="CheckpointHook", interval=200, by_epoch=False, max_keep_ckpts=6),
     ],
 )
 
