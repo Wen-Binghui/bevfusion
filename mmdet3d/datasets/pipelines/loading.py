@@ -56,9 +56,7 @@ class LoadMultiViewImageFromFiles:
         h, w = 0, 0
         for name in filename:
             images.append(Image.open(name))
-        
-        #TODO: consider image padding in waymo
-
+        # TODO: consider image padding in waymo
         results["filename"] = filename
         # unravel to list, see `DefaultFormatBundle` in formating.py
         # which will transpose each image separately and then stack into array
@@ -69,7 +67,7 @@ class LoadMultiViewImageFromFiles:
         # Set initial values for default meta_keys
         results["pad_shape"] = images[0].size
         results["scale_factor"] = 1.0
-        
+
         return results
 
     def __repr__(self):

@@ -11,6 +11,7 @@ def scatter_nd(indices, updates, shape):
     ret = torch.zeros(*shape, dtype=updates.dtype, device=updates.device)
     ndim = indices.shape[-1]
     output_shape = list(indices.shape[:-1]) + shape[indices.shape[-1] :]
+    print("output_shape", output_shape)
     flatted_indices = indices.view(-1, ndim)
     slices = [flatted_indices[:, i] for i in range(ndim)]
     slices += [Ellipsis]

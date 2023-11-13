@@ -6,7 +6,7 @@ log_config = dict(
     interval=10,
     hooks=[
         dict(type="TextLoggerHook"),
-        dict(type="WandbLoggerHook", init_kwargs={"project": "BEVFUSION_ORI_bs3"}),
+        # dict(type="WandbLoggerHook", init_kwargs={"project": "BEVFUSION_ORI_bs3"}),
     ],
 )
 
@@ -34,8 +34,8 @@ image_size = [256, 704]
 map_head_dim = 256
 
 augment2d = dict(
-    resize=[[0.38, 0.55], [0.48, 0.48]],
-    rotate=[-5.4, 5.4],
+    resize=[[1, 1], [0.48, 0.48]],
+    rotate=[-0.0, 0.0],
     gridmask=dict(prob=0.0, fixed_prob=True),
 )
 map_class2label = {
@@ -104,65 +104,65 @@ train_pipeline = [
         with_label_3d=True,
         with_attr_label=False,
     ),
+    # dict(
+    #     type="ObjectPaste",
+    #     stop_epoch=gt_paste_stop_epoch,
+    #     db_sampler=dict(
+    #         dataset_root=dataset_root,
+    #         info_path=dataset_root + "nuscenes_dbinfos_train.pkl",
+    #         rate=1.0,
+    #         prepare=dict(
+    #             filter_by_difficulty=[-1],
+    #             filter_by_min_points=dict(
+    #                 car=5,
+    #                 truck=5,
+    #                 bus=5,
+    #                 trailer=5,
+    #                 construction_vehicle=5,
+    #                 traffic_cone=5,
+    #                 barrier=5,
+    #                 motorcycle=5,
+    #                 bicycle=5,
+    #                 pedestrian=5,
+    #             ),
+    #         ),
+    #         classes=object_classes,
+    #         sample_groups=dict(
+    #             car=2,
+    #             truck=3,
+    #             construction_vehicle=7,
+    #             bus=4,
+    #             trailer=6,
+    #             barrier=2,
+    #             motorcycle=6,
+    #             bicycle=6,
+    #             pedestrian=2,
+    #             traffic_cone=2,
+    #         ),
+    #         points_loader=dict(
+    #             type="LoadPointsFromFile",
+    #             coord_type="LIDAR",
+    #             load_dim=load_dim,
+    #             use_dim=use_dim,
+    #             reduce_beams=reduce_beams,
+    #         ),
+    #     ),
+    # ),
     dict(
-        type="ObjectPaste",
-        stop_epoch=gt_paste_stop_epoch,
-        db_sampler=dict(
-            dataset_root=dataset_root,
-            info_path=dataset_root + "nuscenes_dbinfos_train.pkl",
-            rate=1.0,
-            prepare=dict(
-                filter_by_difficulty=[-1],
-                filter_by_min_points=dict(
-                    car=5,
-                    truck=5,
-                    bus=5,
-                    trailer=5,
-                    construction_vehicle=5,
-                    traffic_cone=5,
-                    barrier=5,
-                    motorcycle=5,
-                    bicycle=5,
-                    pedestrian=5,
-                ),
-            ),
-            classes=object_classes,
-            sample_groups=dict(
-                car=2,
-                truck=3,
-                construction_vehicle=7,
-                bus=4,
-                trailer=6,
-                barrier=2,
-                motorcycle=6,
-                bicycle=6,
-                pedestrian=2,
-                traffic_cone=2,
-            ),
-            points_loader=dict(
-                type="LoadPointsFromFile",
-                coord_type="LIDAR",
-                load_dim=load_dim,
-                use_dim=use_dim,
-                reduce_beams=reduce_beams,
-            ),
-        ),
-    ),
-    dict(
-        type="ImageAug3D",
+        type="ImageAug3D",  # 会添加 img_aug_matrix 参数
         final_dim=image_size,
-        resize_lim=augment2d["resize"][0],
+        resize_lim=augment2d["resize"][1],
         bot_pct_lim=[0.0, 0.0],
         rot_lim=augment2d["rotate"],
-        rand_flip=True,
-        is_train=True,
+        rand_flip=False,
+        is_train=False,
     ),
     dict(
-        type="GlobalRotScaleTrans",
-        resize_lim=augment3d["scale"],
-        rot_lim=augment3d["rotate"],
-        trans_lim=augment3d["translate"],
-        is_train=True,
+        type="GlobalRotScaleTrans",  # 会添加 lidar_aug_matrix 参数
+        resize_lim=[1.0, 1.0],
+        rot_lim=[0.0, 0.0],
+        trans_lim=0.0,
+        is_train=False,
     ),
     dict(
         type="LoadBEVSegmentation",
@@ -171,7 +171,7 @@ train_pipeline = [
         ybound=[-50.0, 50.0, 0.5],
         classes=map_classes,
     ),
-    dict(type="RandomFlip3D"),
+    # dict(type="RandomFlip3D"), # 会修改 lidar_aug_matrix 参数
     dict(type="PointsRangeFilter", point_cloud_range=point_cloud_range),
     dict(type="ObjectRangeFilter", point_cloud_range=point_cloud_range),
     dict(type="ObjectNameFilter", classes=object_classes),
@@ -192,7 +192,7 @@ train_pipeline = [
     dict(
         type="VectorizeLocalMap",
         data_root="./data/nuscenes",
-        patch_size=[60, 30],  
+        patch_size=[60, 30],
         sample_dist=0.7,
         num_samples=150,
         sample_pts=False,

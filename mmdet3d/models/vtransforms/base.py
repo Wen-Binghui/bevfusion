@@ -3,7 +3,7 @@ from typing import Tuple
 import torch
 from mmcv.runner import force_fp32
 from torch import nn
-
+import numpy as np
 from mmdet3d.ops import bev_pool
 
 __all__ = ["BaseTransform", "BaseDepthTransform"]
@@ -51,14 +51,14 @@ class BaseTransform(nn.Module):
 
     @force_fp32()
     def create_frustum(self):
-        iH, iW = self.image_size # 256 - 704
-        fH, fW = self.feature_size # 32 - 88
+        iH, iW = self.image_size  # 256 - 704
+        fH, fW = self.feature_size  # 32 - 88
 
         ds = (
             torch.arange(*self.dbound, dtype=torch.float)
             .view(-1, 1, 1)
             .expand(-1, fH, fW)
-        ) # (D, fH, fW)
+        )  # (D, fH, fW)
         D, _, _ = ds.shape
 
         xs = (
@@ -72,7 +72,7 @@ class BaseTransform(nn.Module):
             .expand(D, fH, fW)
         )
 
-        frustum = torch.stack((xs, ys, ds), -1) # D, fH, fW, 3
+        frustum = torch.stack((xs, ys, ds), -1)  # D, fH, fW, 3
         return nn.Parameter(frustum, requires_grad=False)
 
     @force_fp32()
@@ -125,7 +125,7 @@ class BaseTransform(nn.Module):
         raise NotImplementedError
 
     @force_fp32()
-    def bev_pool(self, geom_feats, x:torch.Tensor):
+    def bev_pool(self, geom_feats, x: torch.Tensor):
         B, N, D, H, W, C = x.shape
         Nprime = B * N * D * H * W
 
@@ -233,31 +233,30 @@ class BaseDepthTransform(BaseTransform):
         camera2lidar_trans = camera2lidar[..., :3, 3]
 
         # print(img.shape, self.image_size, self.feature_size)
-
         batch_size = len(points)
-        #! one depth value for one pixel 
+        #! one depth value for one pixel
         depth = torch.zeros(batch_size, img.shape[1], 1, *self.image_size).to(
             points[0].device
         )
 
-        for b in range(batch_size): # extract one instance from batch
+        for b in range(batch_size):  # extract one instance from batch
             cur_coords = points[b][:, :3]
             cur_img_aug_matrix = img_aug_matrix[b]
             cur_lidar_aug_matrix = lidar_aug_matrix[b]
             cur_lidar2image = lidar2image[b]
 
-            # inverse aug => real coord in physic lidar coord sys 
+            # inverse aug => real coord in physic lidar coord sys
             cur_coords -= cur_lidar_aug_matrix[:3, 3]
             cur_coords = torch.inverse(cur_lidar_aug_matrix[:3, :3]).matmul(
                 cur_coords.transpose(1, 0)
-            ) 
-            # lidar2image => camera coord sys 
+            )
+            # lidar2image => camera coord sys
             cur_coords = cur_lidar2image[:, :3, :3].matmul(cur_coords)
             cur_coords += cur_lidar2image[:, :3, 3].reshape(-1, 3, 1)
             # get 2d coords
-            dist = cur_coords[:, 2, :] # get depth only
+            dist = cur_coords[:, 2, :]  # get depth only
             cur_coords[:, 2, :] = torch.clamp(cur_coords[:, 2, :], 1e-5, 1e5)
-            cur_coords[:, :2, :] /= cur_coords[:, 2:3, :] # x,y / z
+            cur_coords[:, :2, :] /= cur_coords[:, 2:3, :]  # x,y / z
 
             # imgaug
             cur_coords = cur_img_aug_matrix[:, :3, :3].matmul(cur_coords)
@@ -280,7 +279,7 @@ class BaseDepthTransform(BaseTransform):
 
         extra_rots = lidar_aug_matrix[..., :3, :3]
         extra_trans = lidar_aug_matrix[..., :3, 3]
-        geom = self.get_geometry(
+        geom = self.get_geometry(  # [B, 6, 118, 32, 88, 3]
             camera2lidar_rots,
             camera2lidar_trans,
             intrins,

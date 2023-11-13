@@ -3,14 +3,20 @@ import torch
 from torch import nn
 from torch.autograd import Function
 from torch.nn.modules.utils import _pair
-
+import numpy as np
 from .voxel_layer import dynamic_voxelize, hard_voxelize
 
 
 class _Voxelization(Function):
     @staticmethod
     def forward(
-        ctx, points, voxel_size, coors_range, max_points=35, max_voxels=20000, deterministic=True
+        ctx,
+        points: torch.Tensor,
+        voxel_size,
+        coors_range,
+        max_points=35,
+        max_voxels=20000,
+        deterministic=True,
     ):
         """convert kitti points(N, >=3) to voxels.
 
@@ -65,7 +71,7 @@ class _Voxelization(Function):
                 deterministic,
             )
             # select the valid voxels
-            voxels_out = voxels[:voxel_num]
+            voxels_out = voxels[:voxel_num]  # e.g. [99726, 10, 5]
             coors_out = coors[:voxel_num]
             num_points_per_voxel_out = num_points_per_voxel[:voxel_num]
             return voxels_out, coors_out, num_points_per_voxel_out
@@ -76,7 +82,12 @@ voxelization = _Voxelization.apply
 
 class Voxelization(nn.Module):
     def __init__(
-        self, voxel_size, point_cloud_range, max_num_points, max_voxels=20000, deterministic=True
+        self,
+        voxel_size,
+        point_cloud_range,
+        max_num_points,
+        max_voxels=20000,
+        deterministic=True,
     ):
         super(Voxelization, self).__init__()
         """
@@ -116,14 +127,14 @@ class Voxelization(nn.Module):
         self.grid_size = grid_size
         # the origin shape is as [x-len, y-len, z-len]
         # [w, h, d] -> [d, h, w] removed
-        self.pcd_shape = [*input_feat_shape, 1]#[::-1]
+        self.pcd_shape = [*input_feat_shape, 1]  # [::-1]
 
     def forward(self, input):
         """
         Args:
             input: NC points # e.g. torch.Size([252608, 5])
         """
-        if self.training:
+        if self.training:  # training 比 val/test 少
             max_voxels = self.max_voxels[0]
         else:
             max_voxels = self.max_voxels[1]

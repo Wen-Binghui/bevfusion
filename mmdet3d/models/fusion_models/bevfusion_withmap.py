@@ -16,6 +16,7 @@ from mmdet3d.models.builder import (
 )
 from mmdet3d.ops import Voxelization, DynamicScatter
 from mmdet3d.models import FUSIONMODELS
+from torchvision.transforms import ToPILImage
 
 
 from .base import Base3DFusionModel
@@ -24,62 +25,56 @@ __all__ = ["BEVFusionMap"]
 
 
 def format_det(polys, device):
-    
     batch = {
-        'class_label':[],
-        'batch_idx':[],
-        'bbox': [],
+        "class_label": [],
+        "batch_idx": [],
+        "bbox": [],
     }
 
     for batch_idx, poly in enumerate(polys):
+        keypoint_label = torch.from_numpy(poly["det_label"]).to(device)
+        keypoint = torch.from_numpy(poly["keypoint"]).to(device)
 
-        keypoint_label = torch.from_numpy(poly['det_label']).to(device)
-        keypoint = torch.from_numpy(poly['keypoint']).to(device)
-        
-        batch['class_label'].append(keypoint_label)
-        batch['bbox'].append(keypoint)
-    
+        batch["class_label"].append(keypoint_label)
+        batch["bbox"].append(keypoint)
+
     return batch
-        
- 
-def format_gen(polys, device):
 
+
+def format_gen(polys, device):
     line_cls = []
     polylines, polyline_masks, polyline_weights = [], [], []
     bbox, line_cls, line_bs_idx = [], [], []
-    
+
     for batch_idx, poly in enumerate(polys):
-    
         # convert to cuda tensor
         for k in poly.keys():
             if isinstance(poly[k], np.ndarray):
                 poly[k] = torch.from_numpy(poly[k]).to(device)
-            else: # List of ndarray
+            else:  # List of ndarray
                 poly[k] = [torch.from_numpy(v).to(device) for v in poly[k]]
-        
-        line_cls += poly['gen_label'] # torch Tensor
-        line_bs_idx += [batch_idx]*len(poly['gen_label'])
+
+        line_cls += poly["gen_label"]  # torch Tensor
+        line_bs_idx += [batch_idx] * len(poly["gen_label"])
 
         # condition
-        bbox += poly['qkeypoint']
+        bbox += poly["qkeypoint"]
 
         # out
-        polylines += poly['polylines']
-        polyline_masks += poly['polyline_masks']
-        polyline_weights += poly['polyline_weights']
+        polylines += poly["polylines"]
+        polyline_masks += poly["polyline_masks"]
+        polyline_weights += poly["polyline_weights"]
 
     batch = {}
-    batch['lines_bs_idx'] = torch.tensor(
-        line_bs_idx, dtype=torch.long, device=device)
-    batch['lines_cls'] = torch.tensor(
-        line_cls, dtype=torch.long, device=device)
-    batch['bbox_flat'] = torch.stack(bbox, 0)
+    batch["lines_bs_idx"] = torch.tensor(line_bs_idx, dtype=torch.long, device=device)
+    batch["lines_cls"] = torch.tensor(line_cls, dtype=torch.long, device=device)
+    batch["bbox_flat"] = torch.stack(bbox, 0)
 
     # padding
-    batch['polylines'] = pad_sequence(polylines, batch_first=True)
-    batch['polyline_masks'] = pad_sequence(polyline_masks, batch_first=True)
-    batch['polyline_weights'] = pad_sequence(polyline_weights, batch_first=True)
-    
+    batch["polylines"] = pad_sequence(polylines, batch_first=True)
+    batch["polyline_masks"] = pad_sequence(polyline_masks, batch_first=True)
+    batch["polyline_weights"] = pad_sequence(polyline_weights, batch_first=True)
+
     return batch
 
 
@@ -105,7 +100,7 @@ class BEVFusionMap(Base3DFusionModel):
                 }
             )
         if encoders.get("lidar") is not None:
-            if encoders["lidar"]["voxelize"].get("max_num_points", -1) > 0: # True
+            if encoders["lidar"]["voxelize"].get("max_num_points", -1) > 0:  # True
                 voxelize_module = Voxelization(**encoders["lidar"]["voxelize"])
             else:
                 voxelize_module = DynamicScatter(**encoders["lidar"]["voxelize"])
@@ -163,7 +158,6 @@ class BEVFusionMap(Base3DFusionModel):
     ) -> torch.Tensor:
         B, N, C, H, W = x.size()
         x = x.view(B * N, C, H, W)
-
         x = self.encoders["camera"]["backbone"](x)
         x = self.encoders["camera"]["neck"](x)
 
@@ -190,7 +184,7 @@ class BEVFusionMap(Base3DFusionModel):
 
     def extract_lidar_features(self, x) -> torch.Tensor:
         feats, coords, sizes = self.voxelize(x)
-        batch_size = coords[-1, 0] + 1
+        batch_size = coords[-1, 0] + 1  # real size, 有几团点云
         x = self.encoders["lidar"]["backbone"](feats, coords, batch_size, sizes=sizes)
         return x
 
@@ -207,21 +201,22 @@ class BEVFusionMap(Base3DFusionModel):
                 assert len(ret) == 2
                 f, c = ret
                 n = None
-            feats.append(f)
-            coords.append(F.pad(c, (1, 0), mode="constant", value=k))
+            feats.append(f)  # f: (M, 10, 5)
+            coords.append(
+                F.pad(c, (1, 0), mode="constant", value=k)
+            )  # M * 3 => M * 4 # pad到了最前面
             if n is not None:
-                sizes.append(n)
-
-        feats = torch.cat(feats, dim=0)
-        coords = torch.cat(coords, dim=0)
+                sizes.append(n)  # N: (M, )
+        # ASSUME sum(M) = MS
+        feats = torch.cat(feats, dim=0)  # (MS, 10, 5)
+        coords = torch.cat(coords, dim=0)  # (MS, 4)
         if len(sizes) > 0:
-            sizes = torch.cat(sizes, dim=0)
+            sizes = torch.cat(sizes, dim=0)  # (MS, )
             if self.voxelize_reduce:
                 feats = feats.sum(dim=1, keepdim=False) / sizes.type_as(feats).view(
                     -1, 1
                 )
-                feats = feats.contiguous()
-
+                feats = feats.contiguous()  # (MS, 5)
         return feats, coords, sizes
 
     # @auto_fp16(apply_to=("img", "points"))
@@ -290,7 +285,9 @@ class BEVFusionMap(Base3DFusionModel):
     ):
         features = []
         for sensor in (
-            self.encoders if self.training else list(self.encoders.keys())[::-1] # 不是训练反向读
+            self.encoders
+            if self.training
+            else list(self.encoders.keys())[::-1]  # 不是训练反向读
         ):
             if sensor == "camera":
                 feature = self.extract_camera_features(
@@ -307,23 +304,24 @@ class BEVFusionMap(Base3DFusionModel):
                     metas,
                 )
             elif sensor == "lidar":
-
                 feature = self.extract_lidar_features(points)
             else:
                 raise ValueError(f"unsupported sensor: {sensor}")
-            features.append(feature) # [1, 80, 180, 180]
+            features.append(feature)  # [1, 80, 180, 180]
         if not self.training:
             # avoid OOM
             features = features[::-1]
 
         if self.fuser is not None:
-            x = self.fuser(features) # [1, 256, 180, 180]
+            x = self.fuser(features)  # [1, 256, 180, 180]
         else:
             assert len(features) == 1, features
             x = features[0]
-        batch_size = x.shape[0] 
-        x = self.decoder["backbone"](x) # model: SECOND (output tuple of len 3)
-        x = self.decoder["neck"](x) # model: SECONDFPN (output list of len 1) [1, 512, 180, 180] #! AUTOFP16 removed
+        batch_size = x.shape[0]
+        x = self.decoder["backbone"](x)  # model: SECOND (output tuple of len 3)
+        x = self.decoder["neck"](
+            x
+        )  # model: SECONDFPN (output list of len 1) [1, 512, 180, 180] #! AUTOFP16 removed
         if self.training:
             outputs = {}
             for type, head in self.heads.items():
@@ -334,22 +332,24 @@ class BEVFusionMap(Base3DFusionModel):
                     losses = head(x, gt_masks_bev)
                 elif type == "vectormap":
                     map_target = {}
-                    
-                    # try:
                     valid_idx = [i for i in range(len(polys)) if len(polys[i])]
                     polys = [polys[i] for i in valid_idx]
-                    
 
                     if len(valid_idx) != 0:
-                        bev_feats = x[0][valid_idx, :, 90-25:90+25, 90-50:90+50]
-                        map_target['det'] = format_det(polys, x[0].device)
-                        map_target['gen'] = format_gen(polys, x[0].device)
-                        _, losses = \
-                                head(map_target, 
-                                    context={
-                                        'bev_embeddings': bev_feats, 
-                                        'img_shape': [256, 704]},
-                                    only_det=False)
+                        bev_feats = x[0][
+                            valid_idx, :, 90 - 25 : 90 + 25, 90 - 50 : 90 + 50
+                        ]
+                        # bev_feats = x[0][valid_idx, :, :, :]
+                        map_target["det"] = format_det(polys, x[0].device)
+                        map_target["gen"] = format_gen(polys, x[0].device)
+                        _, losses = head(
+                            map_target,
+                            context={
+                                "bev_embeddings": bev_feats,
+                                "img_shape": [256, 704],
+                            },
+                            only_det=False,
+                        )
                     else:
                         losses = {}
                 else:
