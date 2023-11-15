@@ -342,7 +342,7 @@ data = dict(
     ),
 )
 
-evaluation = dict(interval=1, pipeline=test_pipeline)
+evaluation = dict(interval=100, pipeline=test_pipeline)
 
 #! MODEL
 encoder_camera_backbone = dict(
