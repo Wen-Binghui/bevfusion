@@ -1,4 +1,4 @@
-seed = 12
+seed = 0
 deterministic = False
 checkpoint_config = dict(interval=1, max_keep_ckpts=1)
 
@@ -219,7 +219,7 @@ train_pipeline = [
     dict(type="SkipSample"),
     dict(
         type="Collect3D",
-        keys=["img", "points", "gt_bboxes_3d", "gt_labels_3d", "gt_masks_bev", "polys"],
+        keys=["img", "points", "gt_bboxes_3d", "gt_labels_3d", "gt_masks_bev", "polys"], # , "polys"
         meta_keys=[
             "camera_intrinsics",
             "camera2ego",
@@ -231,7 +231,6 @@ train_pipeline = [
             "lidar_aug_matrix",
         ],
     ),
-    
 ]
 
 test_pipeline = [
@@ -345,7 +344,7 @@ data = dict(
     ),
 )
 
-evaluation = dict(interval=100, pipeline=test_pipeline)
+evaluation = dict(interval=1000, pipeline=test_pipeline)
 
 #! MODEL
 encoder_camera_backbone = dict(
@@ -489,6 +488,7 @@ object_heads = dict(
     loss_bbox=dict(type="L1Loss", reduction="mean", loss_weight=0.25),
 )
 
+
 vectormap_heads = dict(
     type="DGHead",
     augmentation=True,
@@ -629,6 +629,8 @@ vectormap_heads = dict(
     sync_cls_avg_factor=True,
 )
 
+
+
 fuser = dict(type="ConvFuser", in_channels=[80, 256], out_channels=256)
 model = dict(
     type="BEVFusionMap",
@@ -642,6 +644,7 @@ model = dict(
     ),
     fuser=fuser,
     decoder=dict(backbone=decoder_backbone, neck=decoder_neck),
+    # heads=dict(object=object_heads),
     heads=dict(object=object_heads, vectormap=vectormap_heads),
 )
 

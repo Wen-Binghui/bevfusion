@@ -231,7 +231,6 @@ train_pipeline = [
             "lidar_aug_matrix",
         ],
     ),
-    
 ]
 
 test_pipeline = [
@@ -345,7 +344,7 @@ data = dict(
     ),
 )
 
-evaluation = dict(interval=100, pipeline=test_pipeline)
+evaluation = dict(interval=1000, pipeline=test_pipeline)
 
 #! MODEL
 encoder_camera_backbone = dict(

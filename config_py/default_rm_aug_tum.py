@@ -3,7 +3,7 @@ deterministic = False
 checkpoint_config = dict(interval=1, max_keep_ckpts=1)
 
 log_config = dict(
-    interval=10,
+    interval=20,
     hooks=[
         dict(type="TextLoggerHook"),
         dict(type="WandbLoggerHook", init_kwargs={"project": "OBJMAP_bs1_gpu4"}),
@@ -216,6 +216,7 @@ train_pipeline = [
     ),
     dict(type="FormatBundleMap"),
     dict(type="DefaultFormatBundle3D", classes=object_classes),
+    dict(type="SkipSample"),
     dict(
         type="Collect3D",
         keys=["img", "points", "gt_bboxes_3d", "gt_labels_3d", "gt_masks_bev", "polys"],
@@ -284,6 +285,7 @@ test_pipeline = [
     dict(type="PointsRangeFilter", point_cloud_range=point_cloud_range),
     dict(type="ImageNormalize", mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225]),
     dict(type="DefaultFormatBundle3D", classes=object_classes),
+    dict(type="SkipSample"),
     dict(
         type="Collect3D",
         keys=["img", "points", "gt_bboxes_3d", "gt_labels_3d", "gt_masks_bev"],
@@ -342,7 +344,7 @@ data = dict(
     ),
 )
 
-evaluation = dict(interval=1, pipeline=test_pipeline)
+evaluation = dict(interval=1000, pipeline=test_pipeline)
 
 #! MODEL
 encoder_camera_backbone = dict(
