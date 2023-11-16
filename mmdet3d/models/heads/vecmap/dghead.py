@@ -8,7 +8,6 @@ from .base_map_head import BaseMapHead
 
 import numpy as np
 from ...augmentation.sythesis_det import NoiseSythesis
-from loguru import logger
 
 @HEADS.register_module(force=True)
 class DGHead(BaseMapHead):
@@ -69,7 +68,6 @@ class DGHead(BaseMapHead):
         outs = dict(
                 bbox=bbox_dict,
             )
-        logger.warning(f'{bbox_dict[-1]["lines"].device} loss_det ENTENCE')
 
         losses_dict, det_match_idxs, det_match_gt_idxs = \
             self.loss_det(batch, outs)

@@ -124,6 +124,24 @@ class DefaultFormatBundle3D:
         return results
 
 
+
+@PIPELINES.register_module()
+class SkipSample:
+    def __init__(self):
+        pass
+    def skip_func(self, results):
+        polys = results['polys'].data
+        if len(polys) != 0:
+            return False
+        return True
+
+    def __call__(self, results):
+        if self.skip_func(results):
+            return None
+        else:
+            return results
+
+
 @PIPELINES.register_module()
 class Collect3D:
     def __init__(

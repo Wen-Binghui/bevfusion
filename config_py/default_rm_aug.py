@@ -1,12 +1,12 @@
-seed = 0
+seed = 12
 deterministic = False
 checkpoint_config = dict(interval=1, max_keep_ckpts=1)
 
 log_config = dict(
-    interval=10,
+    interval=2,
     hooks=[
         dict(type="TextLoggerHook"),
-        dict(type="WandbLoggerHook", init_kwargs={"project": "OBJMAP_bs1_gpu1"}),
+        dict(type="WandbLoggerHook", init_kwargs={"project": "OBJMAP_bs1_gpu2"}),
         dict(type="CheckpointHook", interval=200, by_epoch=False, max_keep_ckpts=6),
     ],
 )
@@ -216,6 +216,7 @@ train_pipeline = [
     ),
     dict(type="FormatBundleMap"),
     dict(type="DefaultFormatBundle3D", classes=object_classes),
+    dict(type="SkipSample"),
     dict(
         type="Collect3D",
         keys=["img", "points", "gt_bboxes_3d", "gt_labels_3d", "gt_masks_bev", "polys"],
@@ -230,6 +231,7 @@ train_pipeline = [
             "lidar_aug_matrix",
         ],
     ),
+    
 ]
 
 test_pipeline = [
