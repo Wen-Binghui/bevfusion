@@ -15,6 +15,7 @@ from mmdet.models.utils.transformer import inverse_sigmoid
 from mmdet.models import build_loss
 
 from .base_map_head import BaseMapHead
+from loguru import logger
 
 
 @HEADS.register_module()
@@ -342,6 +343,8 @@ class DETRMapFixedNumHead(BaseMapHead):
         # get target for each sample
         new_gts, num_total_pos, num_total_neg, pos_inds_list =\
             self.get_targets(preds, gts, gt_bboxes_ignore_list)
+        print('logging')
+        logger.error(f"device: {preds['scores'].device}, num_total_pos: {num_total_pos}")
 
         # batched all data
         for k, v in new_gts.items():

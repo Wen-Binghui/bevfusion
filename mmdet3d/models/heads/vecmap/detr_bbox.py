@@ -9,7 +9,12 @@ from torch.distributions.categorical import Categorical
 from mmdet.core import multi_apply, reduce_mean
 from mmdet.models import HEADS
 from .detr_head import DETRMapFixedNumHead
-
+from loguru import logger
+logger.add(
+    'info.log',
+    format="{time:YYYY-MM-DD HH:mm:ss} | {level} | {module}:{function}:{line} - {message}",
+    level="INFO",
+)
 
 @HEADS.register_module(force=True)
 class DETRBboxHead(DETRMapFixedNumHead):
@@ -352,8 +357,10 @@ class DETRBboxHead(DETRMapFixedNumHead):
         """
 
         # Get target for each sample
+        logger.error(f"[detr_bbox] device {preds['scores'].device} Entered")
         new_gts, num_total_pos, num_total_neg, pos_inds_list, pos_gt_inds_list =\
             self.get_targets(preds, gts, gt_bboxes_ignore_list)
+        logger.error(f"[detr_bbox] device: {preds['scores'].device}, num_total_pos: {num_total_pos}")
 
         # Batched all data
         for k, v in new_gts.items():

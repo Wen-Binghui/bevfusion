@@ -22,6 +22,7 @@ from torchvision.transforms import ToPILImage
 from .base import Base3DFusionModel
 
 __all__ = ["BEVFusionMap"]
+from loguru import logger
 
 
 def format_det(polys, device):
@@ -331,17 +332,23 @@ class BEVFusionMap(Base3DFusionModel):
                 elif type == "map":
                     losses = head(x, gt_masks_bev)
                 elif type == "vectormap":
+                    logger.warning(f'{x[0].device} ENTER vectormap')
                     map_target = {}
                     valid_idx = [i for i in range(len(polys)) if len(polys[i])]
                     polys = [polys[i] for i in valid_idx]
-
+                    logger.warning(f'{x[0].device} polys CONSTRUCTED')
                     if len(valid_idx) != 0:
                         bev_feats = x[0][
                             valid_idx, :, 90 - 25 : 90 + 25, 90 - 50 : 90 + 50
                         ]
-                        # bev_feats = x[0][valid_idx, :, :, :]
+                        
+                        
                         map_target["det"] = format_det(polys, x[0].device)
+                        logger.warning(f'{x[0].device} format_det DONE')
                         map_target["gen"] = format_gen(polys, x[0].device)
+                        logger.warning(f'{x[0].device} format_gen DONE')
+                        
+                        logger.warning(f'{x[0].device} DGHEAD ENTENCE')
                         _, losses = head(
                             map_target,
                             context={
