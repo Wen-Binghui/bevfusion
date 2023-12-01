@@ -10,7 +10,7 @@ from mmcv.parallel import MMDistributedDataParallel
 from mmcv.runner import load_checkpoint
 from torchpack import distributed as dist
 from torchpack.utils.config import configs
-from torchpack.utils.tqdm import tqdm
+from tqdm import tqdm
 
 from mmdet3d.core import LiDARInstance3DBoxes
 from mmdet3d.core.utils import visualize_camera, visualize_lidar, visualize_map
@@ -47,6 +47,7 @@ def main() -> None:
     parser.add_argument("--bbox-score", type=float, default=None)
     parser.add_argument("--map-score", type=float, default=0.5)
     parser.add_argument("--out-dir", type=str, default="viz")
+    parser.add_argument("--out-dir-data", type=str, default="none")
     args, opts = parser.parse_known_args()
 
     configs.load(args.config, recursive=True)
@@ -79,10 +80,15 @@ def main() -> None:
         )
         model.eval()
 
+    if args.out_dir_data != "none":
+        result_data = []
+        os.makedirs(args.out_dir_data, exist_ok=True)
+
     for data in tqdm(dataflow):
+        cur_data_dict = {}
         metas = data["metas"].data[0][0]
         name = "{}-{}".format(metas["timestamp"], metas["token"])
-
+        cur_data_dict["metas"] = metas
         if args.mode == "pred":
             with torch.inference_mode():
                 outputs = model(**data)
@@ -97,7 +103,11 @@ def main() -> None:
                 labels = labels[indices]
 
             bboxes[..., 2] -= bboxes[..., 5] / 2
+            cur_data_dict["bboxes"] = bboxes
+            cur_data_dict["labels"] = labels
+            cur_data_dict["scores"] = None
             bboxes = LiDARInstance3DBoxes(bboxes, box_dim=9)
+
         elif args.mode == "pred" and "boxes_3d" in outputs[0]:
             bboxes = outputs[0]["boxes_3d"].tensor.numpy()
             scores = outputs[0]["scores_3d"].numpy()
@@ -116,6 +126,9 @@ def main() -> None:
                 labels = labels[indices]
 
             bboxes[..., 2] -= bboxes[..., 5] / 2
+            cur_data_dict["bboxes"] = bboxes
+            cur_data_dict["labels"] = labels
+            cur_data_dict["scores"] = scores
             bboxes = LiDARInstance3DBoxes(bboxes, box_dim=9)
         else:
             bboxes = None
@@ -130,36 +143,39 @@ def main() -> None:
         else:
             masks = None
 
-        if "img" in data:
-            for k, image_path in enumerate(metas["filename"]):
-                image = mmcv.imread(image_path)
-                visualize_camera(
-                    os.path.join(args.out_dir, f"camera-{k}", f"{name}.png"),
-                    image,
-                    bboxes=bboxes,
-                    labels=labels,
-                    transform=metas["lidar2image"][k],
-                    classes=cfg.object_classes,
-                )
+        cur_data_dict["classes"] = cfg.object_classes
+        mmcv.dump(cur_data_dict, os.path.join(args.out_dir_data, f"{name}.pkl"))
 
-        if "points" in data:
-            lidar = data["points"].data[0][0].numpy()
-            visualize_lidar(
-                os.path.join(args.out_dir, "lidar", f"{name}.png"),
-                lidar,
-                bboxes=bboxes,
-                labels=labels,
-                xlim=[cfg.point_cloud_range[d] for d in [0, 3]],
-                ylim=[cfg.point_cloud_range[d] for d in [1, 4]],
-                classes=cfg.object_classes,
-            )
+        # if "img" in data:
+        #     for k, image_path in enumerate(metas["filename"]):
+        #         image = mmcv.imread(image_path)
+        #         visualize_camera(
+        #             os.path.join(args.out_dir, f"camera-{k}", f"{name}.png"),
+        #             image,
+        #             bboxes=bboxes,
+        #             labels=labels,
+        #             transform=metas["lidar2image"][k],
+        #             classes=cfg.object_classes,
+        #         )
 
-        if masks is not None:
-            visualize_map(
-                os.path.join(args.out_dir, "map", f"{name}.png"),
-                masks,
-                classes=cfg.map_classes,
-            )
+        # if "points" in data:
+        #     lidar = data["points"].data[0][0].numpy()
+        #     visualize_lidar(
+        #         os.path.join(args.out_dir, "lidar", f"{name}.png"),
+        #         lidar,
+        #         bboxes=bboxes,
+        #         labels=labels,
+        #         xlim=[cfg.point_cloud_range[d] for d in [0, 3]],
+        #         ylim=[cfg.point_cloud_range[d] for d in [1, 4]],
+        #         classes=cfg.object_classes,
+        #     )
+
+        # if masks is not None:
+        #     visualize_map(
+        #         os.path.join(args.out_dir, "map", f"{name}.png"),
+        #         masks,
+        #         classes=cfg.map_classes,
+        #     )
 
 
 if __name__ == "__main__":

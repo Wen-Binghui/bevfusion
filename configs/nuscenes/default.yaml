@@ -239,6 +239,9 @@ test_pipeline:
   -
     type: DefaultFormatBundle3D
     classes: ${object_classes}
+
+  
+  
   -
     type: Collect3D
     keys:

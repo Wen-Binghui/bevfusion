@@ -338,11 +338,10 @@ class BEVFusionMap(Base3DFusionModel):
                         bev_feats = x[0][
                             valid_idx, :, 90 - 25 : 90 + 25, 90 - 50 : 90 + 50
                         ]
-                        
-                        
+
                         map_target["det"] = format_det(polys, x[0].device)
                         map_target["gen"] = format_gen(polys, x[0].device)
-                        
+
                         _, losses = head(
                             map_target,
                             context={
@@ -382,6 +381,40 @@ class BEVFusionMap(Base3DFusionModel):
                             {
                                 "masks_bev": logits[k].cpu(),
                                 "gt_masks_bev": gt_masks_bev[k].cpu(),
+                            }
+                        )
+                elif type == "vectormap":
+                    pass
+                    map_target = {}
+                    valid_idx = [i for i in range(len(polys)) if len(polys[i])]
+                    polys = [polys[i] for i in valid_idx]
+                    # if len(valid_idx) != 0:
+                    bev_feats = x[0][valid_idx, :, 90 - 25 : 90 + 25, 90 - 50 : 90 + 50]
+
+                    map_target["det"] = format_det(polys, x[0].device)
+                    map_target["gen"] = format_gen(polys, x[0].device)
+
+                    preds_dict = head(
+                        map_target,
+                        context={
+                            "bev_embeddings": bev_feats,
+                            "img_shape": [256, 704],
+                        },
+                        condition_on_det=True,
+                        gt_condition=False,
+                        only_det=False,
+                    )
+                    if preds_dict is None:
+                        output_map = None
+                    else:
+                        token = [meta["token"] for meta in metas]
+                        output_map = head.post_process(
+                            preds_dict, token, map_target, only_det=False
+                        )
+                    for k, _map in enumerate(output_map):
+                        outputs[k].update(
+                            {
+                                "map": _map,
                             }
                         )
                 else:

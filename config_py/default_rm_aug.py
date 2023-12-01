@@ -35,7 +35,7 @@ image_size = [256, 704]
 map_head_dim = 256
 
 augment2d = dict(
-    resize=[[1, 1], [0.48, 0.48]],
+    resize=[[0.38, 0.55], [0.48, 0.48]],
     rotate=[-0.0, 0.0],
     gridmask=dict(prob=0.0, fixed_prob=True),
 )
@@ -231,7 +231,6 @@ train_pipeline = [
             "lidar_aug_matrix",
         ],
     ),
-    
 ]
 
 test_pipeline = [
@@ -285,11 +284,36 @@ test_pipeline = [
     ),
     dict(type="PointsRangeFilter", point_cloud_range=point_cloud_range),
     dict(type="ImageNormalize", mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225]),
+    dict(
+        type="VectorizeLocalMap",
+        data_root="./data/nuscenes",
+        patch_size=[60, 30],
+        sample_dist=0.7,
+        num_samples=150,
+        sample_pts=False,
+        max_len=30,
+        padding=False,
+        normalize=True,
+        fixed_num=dict(ped_crossing=-1, divider=-1, contours=-1, others=-1),
+        class2label=map_class2label,
+        centerline=False,
+    ),
+    dict(
+        type="PolygonizeLocalMapBbox",
+        canvas_size=canvas_size,  # xy
+        coord_dim=2,
+        num_class=3,
+        mode="xyxy",
+        test_mode=True,
+        threshold=0.02,
+        flatten=False,
+    ),
+    dict(type="FormatBundleMap"),
     dict(type="DefaultFormatBundle3D", classes=object_classes),
     dict(type="SkipSample"),
     dict(
         type="Collect3D",
-        keys=["img", "points", "gt_bboxes_3d", "gt_labels_3d", "gt_masks_bev"],
+        keys=["img", "points", "gt_bboxes_3d", "gt_labels_3d", "gt_masks_bev", "polys"],
         meta_keys=[
             "camera_intrinsics",
             "camera2ego",

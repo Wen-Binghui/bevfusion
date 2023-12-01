@@ -35,13 +35,15 @@ class ImageAug3D:
         self.is_train = is_train
 
     def sample_augmentation(self, results):
-        W, H = results["ori_shape"]
+        W, H = results["ori_shape"]  # (1600, 900)
         fH, fW = self.final_dim
         if self.is_train:
             resize = np.random.uniform(*self.resize_lim)
             resize_dims = (int(W * resize), int(H * resize))
             newW, newH = resize_dims
-            crop_h = int((1 - np.random.uniform(*self.bot_pct_lim)) * newH) - fH
+            crop_h = (
+                int((1 - np.random.uniform(*self.bot_pct_lim)) * newH) - fH
+            )  #  newH - fH
             crop_w = int(np.random.uniform(0, max(0, newW - fW)))
             crop = (crop_w, crop_h, crop_w + fW, crop_h + fH)
             flip = False
@@ -50,10 +52,10 @@ class ImageAug3D:
             rotate = np.random.uniform(*self.rot_lim)
         else:
             resize = np.mean(self.resize_lim)
-            resize_dims = (int(W * resize), int(H * resize))
+            resize_dims = (int(W * resize), int(H * resize))  # 要变更为的 shape
             newW, newH = resize_dims
             crop_h = int((1 - np.mean(self.bot_pct_lim)) * newH) - fH
-            crop_w = int(max(0, newW - fW) / 2)
+            crop_w = int(max(0, newW - fW) / 2)  # 中间
             crop = (crop_w, crop_h, crop_w + fW, crop_h + fH)
             flip = False
             rotate = 0
@@ -902,16 +904,16 @@ class ImagePad:
 
 @PIPELINES.register_module()
 class ImageNormalize:
-    def __init__(self, mean, std, ignore = False):
+    def __init__(self, mean, std, ignore=False):
         self.mean = mean
         self.std = std
         if ignore:
-           self.compose = torchvision.transforms.Compose(
+            self.compose = torchvision.transforms.Compose(
                 [
                     torchvision.transforms.ToTensor(),
                 ]
             )
-        else: 
+        else:
             self.compose = torchvision.transforms.Compose(
                 [
                     torchvision.transforms.ToTensor(),

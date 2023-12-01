@@ -1,7 +1,7 @@
 import tempfile
 from os import path as osp
 from typing import Any, Dict
-
+import os
 import mmcv
 import numpy as np
 import pyquaternion
@@ -13,6 +13,7 @@ from mmdet.datasets import DATASETS
 
 from ..core.bbox import LiDARInstance3DBoxes
 from .custom_3d import Custom3DDataset
+from .precision_recall.average_precision_gen import eval_chamfer
 
 
 @DATASETS.register_module()
@@ -211,7 +212,7 @@ class NuScenesDataset(Custom3DDataset):
 
         data = dict(
             token=info["token"],
-            sample_idx=info['token'],
+            sample_idx=info["token"],
             lidar_path=info["lidar_path"],
             sweeps=info["sweeps"],
             timestamp=info["timestamp"],
@@ -320,7 +321,9 @@ class NuScenesDataset(Custom3DDataset):
         # the same as KITTI (0.5, 0.5, 0)
         # haotian: this is an important change: from 0.5, 0.5, 0.5 -> 0.5, 0.5, 0
         gt_bboxes_3d = LiDARInstance3DBoxes(
-            gt_bboxes_3d, box_dim=gt_bboxes_3d.shape[-1], origin=(0.5, 0.5, 0) #! 注意 (0.5, 0.5, 0)
+            gt_bboxes_3d,
+            box_dim=gt_bboxes_3d.shape[-1],
+            origin=(0.5, 0.5, 0),  #! 注意 (0.5, 0.5, 0)
         ).convert_to(self.box_mode_3d)
 
         anns_results = dict(
@@ -460,6 +463,69 @@ class NuScenesDataset(Custom3DDataset):
         detail["object/map"] = metrics["mean_ap"]
         return detail
 
+    def format_results_map(
+        self, results, name, prefix=None, patch_size=(60, 30), origin=(0, 0)
+    ):
+        meta = self.modality
+        submissions = {
+            "meta": meta,
+            "results": {},
+            "groundTruth": {},  # for validation
+        }
+        patch_size = np.array(patch_size)
+        origin = np.array(origin)
+
+        for case in mmcv.track_iter_progress(results):
+            """
+            vectorized_line {
+                "pts":               List[<float, 2>]  -- Ordered points to define the vectorized line.
+                "pts_num":           <int>,            -- Number of points in this line.
+                "type":              <0, 1, 2>         -- Type of the line: 0: ped; 1: divider; 2: boundary
+                "confidence_level":  <float>           -- Confidence level for prediction (used by Average Precision)
+            }
+            """
+            case = case["map"]
+            if case is None:
+                continue
+
+            vector_lines = []
+            for i in range(case["nline"]):
+                vector = case["lines"][i] * patch_size + origin
+                vector_lines.append(
+                    {
+                        "pts": vector,
+                        "pts_num": len(case["lines"][i]),
+                        "type": case["labels"][i],
+                        "confidence_level": case["scores"][i],
+                    }
+                )
+                submissions["results"][case["token"]] = {}
+                submissions["results"][case["token"]]["vectors"] = vector_lines
+
+            if "groundTruth" in case:
+                submissions["groundTruth"][case["token"]] = {}
+                vector_lines = []
+                for i in range(case["groundTruth"]["nline"]):
+                    line = case["groundTruth"]["lines"][i] * patch_size + origin
+
+                    vector_lines.append(
+                        {
+                            "pts": line,
+                            "pts_num": len(case["groundTruth"]["lines"][i]),
+                            "type": case["groundTruth"]["labels"][i],
+                            "confidence_level": 1.0,
+                        }
+                    )
+                submissions["groundTruth"][case["token"]]["vectors"] = vector_lines
+
+        # Use pickle format to minimize submission file size.
+        print("Done!")
+        mmcv.mkdir_or_exist(prefix)
+        res_path = os.path.join(prefix, "{}.pkl".format(name))
+        mmcv.dump(submissions, res_path)
+
+        return res_path
+
     def format_results(self, results, jsonfile_prefix=None):
         """Format the results to json (standard format for COCO evaluation).
 
@@ -564,6 +630,39 @@ class NuScenesDataset(Custom3DDataset):
 
             if tmp_dir is not None:
                 tmp_dir.cleanup()
+
+        if "map" in results[0]:
+            name = "results_nuscence"
+            tmp_dir = tempfile.TemporaryDirectory()
+            result_path = self.format_results_map(
+                results,
+                name,
+                prefix=tmp_dir.name,
+                patch_size=[60, 30],
+                origin=(0, 0),
+            )
+            evaluation_cfg = dict(
+                result_path="./",
+                dataroot="/mnt/datasets/nuScenes/",
+                # will be overwirte in code
+                ann_file="/mnt/datasets/nuScenes/nuscenes_map_infos_val.pkl",
+                num_class=3,
+                class_name=["ped_crossing", "divider", "contours"],
+            )
+            evaluation_cfg["result_path"] = result_path
+            evaluation_cfg["ann_file"] = self.ann_file
+
+            mean_ap = eval_chamfer(evaluation_cfg, update=True, logger=None)
+
+            result_dict = {
+                "mAP": mean_ap,
+            }
+
+            print("VectormapNet Evaluation Results:")
+            print(result_dict)
+            if tmp_dir is not None:
+                tmp_dir.cleanup()
+            pass
 
         return metrics
 

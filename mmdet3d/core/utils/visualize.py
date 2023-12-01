@@ -9,7 +9,12 @@ from matplotlib import pyplot as plt
 
 from ..bbox import LiDARInstance3DBoxes
 
-__all__ = ["visualize_camera", "visualize_lidar", "visualize_map"]
+__all__ = [
+    "visualize_camera",
+    "visualize_lidar",
+    "visualize_map",
+    "visualize_camera_nosave",
+]
 
 
 OBJECT_PALETTE = {
@@ -38,6 +43,74 @@ MAP_PALETTE = {
     "lane_divider": (106, 61, 154),
     "divider": (106, 61, 154),
 }
+
+
+def visualize_camera_nosave(
+    image: np.ndarray,
+    *,
+    bboxes: Optional[LiDARInstance3DBoxes] = None,
+    labels: Optional[np.ndarray] = None,
+    transform: Optional[np.ndarray] = None,
+    classes: Optional[List[str]] = None,
+    color: Optional[Tuple[int, int, int]] = None,
+    thickness: float = 4,
+):
+    canvas = image.copy()
+    canvas = cv2.cvtColor(canvas, cv2.COLOR_RGB2BGR)
+
+    if bboxes is not None and len(bboxes) > 0:
+        corners = bboxes.corners
+        num_bboxes = corners.shape[0]
+
+        coords = np.concatenate(
+            [corners.reshape(-1, 3), np.ones((num_bboxes * 8, 1))], axis=-1
+        )
+        transform = copy.deepcopy(transform).reshape(4, 4)
+        coords = coords @ transform.T
+        coords = coords.reshape(-1, 8, 4)
+
+        indices = np.all(coords[..., 2] > 0, axis=1)
+        coords = coords[indices]
+        labels = labels[indices]
+
+        indices = np.argsort(-np.min(coords[..., 2], axis=1))
+        coords = coords[indices]
+        labels = labels[indices]
+
+        coords = coords.reshape(-1, 4)
+        coords[:, 2] = np.clip(coords[:, 2], a_min=1e-5, a_max=1e5)
+        coords[:, 0] /= coords[:, 2]
+        coords[:, 1] /= coords[:, 2]
+
+        coords = coords[..., :2].reshape(-1, 8, 2)
+        for index in range(coords.shape[0]):
+            name = classes[labels[index]]
+            for start, end in [
+                (0, 1),
+                (0, 3),
+                (0, 4),
+                (1, 2),
+                (1, 5),
+                (3, 2),
+                (3, 7),
+                (4, 5),
+                (4, 7),
+                (2, 6),
+                (5, 6),
+                (6, 7),
+            ]:
+                cv2.line(
+                    canvas,
+                    coords[index, start].astype(np.int),
+                    coords[index, end].astype(np.int),
+                    color or OBJECT_PALETTE[name],
+                    thickness,
+                    cv2.LINE_AA,
+                )
+        canvas = canvas.astype(np.uint8)
+    canvas = cv2.cvtColor(canvas, cv2.COLOR_BGR2RGB)
+
+    return canvas
 
 
 def visualize_camera(

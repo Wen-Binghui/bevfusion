@@ -6,8 +6,8 @@ log_config = dict(
     interval=20,
     hooks=[
         dict(type="TextLoggerHook"),
-        dict(type="WandbLoggerHook", init_kwargs={"project": "OBJMAP_bs1_gpu4"}),
-        dict(type="CheckpointHook", interval=200, by_epoch=False, max_keep_ckpts=6),
+        # dict(type="WandbLoggerHook", init_kwargs={"project": "OBJMAP_bs1_gpu4"}),
+        # dict(type="CheckpointHook", interval=200, by_epoch=False, max_keep_ckpts=6),
     ],
 )
 
@@ -264,7 +264,7 @@ test_pipeline = [
         final_dim=image_size,
         resize_lim=augment2d["resize"][1],
         bot_pct_lim=[0.0, 0.0],
-        rot_lim=augment2d["rotate"],
+        rot_lim=[0.0, 0.0],
         rand_flip=False,
         is_train=False,
     ),
@@ -284,11 +284,36 @@ test_pipeline = [
     ),
     dict(type="PointsRangeFilter", point_cloud_range=point_cloud_range),
     dict(type="ImageNormalize", mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225]),
+    dict(
+        type="VectorizeLocalMap",
+        data_root="./data/nuscenes",
+        patch_size=[60, 30],
+        sample_dist=0.7,
+        num_samples=150,
+        sample_pts=False,
+        max_len=30,
+        padding=False,
+        normalize=True,
+        fixed_num=dict(ped_crossing=-1, divider=-1, contours=-1, others=-1),
+        class2label=map_class2label,
+        centerline=False,
+    ),
+    dict(
+        type="PolygonizeLocalMapBbox",
+        canvas_size=canvas_size,  # xy
+        coord_dim=2,
+        num_class=3,
+        mode="xyxy",
+        test_mode=True,
+        threshold=0.02,
+        flatten=False,
+    ),
+    dict(type="FormatBundleMap"),
     dict(type="DefaultFormatBundle3D", classes=object_classes),
     dict(type="SkipSample"),
     dict(
         type="Collect3D",
-        keys=["img", "points", "gt_bboxes_3d", "gt_labels_3d", "gt_masks_bev"],
+        keys=["img", "points", "gt_bboxes_3d", "gt_labels_3d", "gt_masks_bev", "polys"],
         meta_keys=[
             "camera_intrinsics",
             "camera2ego",

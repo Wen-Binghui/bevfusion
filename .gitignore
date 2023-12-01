@@ -3,6 +3,10 @@ data/
 runs/
 vis/
 scripts/
+result/
+viz/
+viz_gt/
+infer_res/
 
 *.jpg
 wandb/

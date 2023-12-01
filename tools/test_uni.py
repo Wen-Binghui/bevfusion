@@ -129,8 +129,9 @@ def main():
     if args.out is not None and not args.out.endswith((".pkl", ".pickle")):
         raise ValueError("The output file must be a pkl file.")
 
-    configs.load(args.config, recursive=True)
-    cfg = Config(recursive_eval(configs), filename=args.config)
+    # configs.load(args.config, recursive=True)
+    cfg = Config.fromfile(filename=args.config)
+    cfg.merge_from_dict(recursive_eval(configs))
     print(cfg)
 
     if args.cfg_options is not None:
@@ -159,7 +160,7 @@ def main():
                 ds_cfg.pipeline = replace_ImageToTensor(ds_cfg.pipeline)
 
     # init distributed env first, since logger depends on the dist info.
-    distributed = True
+    distributed = False
 
     # set random seeds
     if args.seed is not None:
